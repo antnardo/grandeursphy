@@ -312,3 +312,7 @@ l'affichage), `notation`, une unité de conversion (`qty(v, "km/h")`) et
 
 `cs`, `units` et `angles` n'avaient aucun utilisateur ; leur code est dans
 l'historique git (premier commit) et dans `../_archives/ancien-2026-10-08/`.
+
+## Licence
+
+Licence MIT (`LICENSE`).

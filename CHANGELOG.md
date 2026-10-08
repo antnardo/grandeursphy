@@ -11,6 +11,7 @@ scipy.constants.
 
 ### Ajouté
 
+- Licence MIT.
 - `grandeur(...)` : grandeur à unité, sous-classe de la quantité pint, lue depuis
   une chaîne (« 1.20 m.s-1 », « 1.20(3) m », « (1.20 ± 0.03)e3 m », « 1,20 m »), un
   nombre, un tableau ou une autre quantité, avec incertitude éventuelle.

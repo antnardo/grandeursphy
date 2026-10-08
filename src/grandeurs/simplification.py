@@ -3,7 +3,7 @@
 pint propose ``to_base_units`` (tout en kg, m, s, A…), ``to_reduced_units``
 (simplifie sans changer d'unités) et ``to_preferred``, qui cherche une
 combinaison d'unités préférées ; essayé avec N, J, W, Pa, C, V, Ω, F, H, T, Wb
-et Hz, ce dernier écrit une accélération « Hz·W/N » et une éclairement
+et Hz, il écrit une accélération « Hz·W/N » et un éclairement (kg·s⁻³)
 « C·Hz²·T ». D'où cet algorithme plus étroit, mais prévisible :
 
 1. on passe en unités de base SI (kg, m, s, A, mol, K, cd ; un radian

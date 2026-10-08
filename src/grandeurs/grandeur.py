@@ -201,6 +201,7 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
 
     def latex(self, unite: Any = None, **options: Any) -> str:
         r"""Écrit ``\qty{1.20(1)}{m.s^{-1}}`` pour siunitx ; voir :func:`grandeurs.qty`."""
+        # Import tardif : latex importe saisie, qui importe ce module.
         from grandeurs.latex import qty
 
         return qty(self, unite, **options)

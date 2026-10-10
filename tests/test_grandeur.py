@@ -87,11 +87,11 @@ class TestConversions:
     @pytest.mark.parametrize(
         ("valeur", "unite", "attendu"),
         [
-            (2.0, "kg.m.s-2", "2 N"),
-            (1.0, "kN.mm", "1 J"),
-            (6.0, "V/mA", "6000 Ω"),
-            (1.0, "W.s", "1 J"),
-            (2.0, "km/h", "0.555555555555556 m·s⁻¹"),
+            (2.0, "kg.m.s-2", "2.00 N"),
+            (1.0, "kN.mm", "1.00 J"),
+            (6.0, "V/mA", "6.00e3 Ω"),
+            (1.0, "W.s", "1.00 J"),
+            (2.0, "km/h", "0.556 m·s⁻¹"),
         ],
     )
     def test_si_simplifie(self, valeur, unite, attendu):
@@ -102,8 +102,8 @@ class TestConversions:
         assert f.unite == unit("N")
 
     def test_produit_par_une_unite(self):
-        assert str(grandeur(2, "m") * unit("s")) == "2 m·s"
-        assert str(grandeur(2, "m") / unit("s")) == "2 m·s⁻¹"
+        assert str(grandeur(2, "m") * unit("s")) == "2.00 m·s"
+        assert str(grandeur(2, "m") / unit("s")) == "2.00 m·s⁻¹"
 
 
 class TestEcriture:
@@ -122,8 +122,8 @@ class TestEcriture:
         assert str(grandeur(9.81, "m/s2")) == "9.81 m·s⁻²"
 
     def test_degre_colle_au_nombre_mais_pas_le_celsius(self):
-        assert str(grandeur(30, "°")) == "30°"
-        assert str(grandeur(20, "°C")) == "20 °C"
+        assert str(grandeur(30, "°")) == "30.0°"
+        assert str(grandeur(20, "°C")) == "20.0 °C"
 
     @pytest.mark.parametrize(
         ("options", "attendu"),
@@ -142,8 +142,25 @@ class TestEcriture:
         with reglages_temporaires(style_incertitude="courte", decimale=","):
             assert str(grandeur("1.20 m")) == "1,20(1) m"
 
-    def test_tableau_ecrit_avec_son_unite(self):
-        assert str(grandeur(np.array([1.0, 2.0]), "m")) == "[1. 2.] m"
+    def test_tableau_arrondi_comme_un_scalaire(self):
+        assert str(grandeur(np.array([1.0, 2.0]), "m")) == "[1.00; 2.00] m"
+        assert str(grandeur(np.ones((2, 2)), "m")) == "[[1.00; 1.00];\n [1.00; 1.00]] m"
+
+    def test_tableau_incertain_arrondi_d_apres_les_incertitudes(self):
+        g = grandeur([1.0, 2.0], "m", incertitude=[0.1, 0.02])
+        assert str(g) == "[1.0 ± 0.1; 2.00 ± 0.02] m"
+        assert g.texte(style="courte") == "[1.0(1); 2.00(2)] m"
+
+    def test_valeur_exacte_au_reglage_chiffres(self):
+        g = grandeur(9.79828445167129, "m/s2")
+        assert str(g) == "9.80 m·s⁻²"
+        with reglages_temporaires(chiffres=5):
+            assert str(g) == "9.7983 m·s⁻²"
+        assert g.texte(chiffres=2) == "9.8 m·s⁻²"
+
+    def test_valeur_incertaine_ignore_le_reglage_chiffres(self):
+        with reglages_temporaires(chiffres=5):
+            assert str(grandeur("1.20 m")) == "(1.20 ± 0.01) m"
 
     def test_format_applique_a_la_valeur(self):
         assert f"{grandeur(1.23456, 'm'):.2f}" == "1.23 m"

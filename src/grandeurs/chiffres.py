@@ -13,25 +13,27 @@ d'``uncertainties``. Sont aussi lues les écritures « 1.20(3) », « 1.20 ± 0.
 Arrondi. L'incertitude est arrondie à ``chiffres_incertitude`` chiffres
 significatifs (un par défaut), et la valeur au même rang : c'est l'incertitude
 qui fixe les chiffres significatifs de la valeur. Sans incertitude, la valeur
-est exacte et s'écrit en entier, à 15 chiffres significatifs au plus (au-delà,
-un flottant ne porte que le bruit des conversions), sauf si l'on demande un
-nombre de chiffres. L'arrondi se fait en décimal, sur l'écriture
-la plus courte du flottant (``repr``), et au plus proche avec le demi vers le
-haut : 2,675 s'arrondit à 2,68 comme on l'attend sur le papier, alors que
-``round(2.675, 2)`` donne 2,67 à cause de l'écriture binaire.
+est exacte : :func:`arrondir_valeur`, le point d'arrondi de toutes les
+écritures du paquet, l'écrit à ``reglages().chiffres`` chiffres significatifs
+(3 par défaut) ; :func:`arrondir`, la fonction de base, l'écrit en entier, à 15
+chiffres significatifs au plus (au-delà, un flottant ne porte que le bruit des
+conversions). L'arrondi se fait en décimal, sur l'écriture la plus courte du
+flottant (``repr``), et au plus proche avec le demi vers le haut : 2,675
+s'arrondit à 2,68 comme on l'attend sur le papier, alors que ``round(2.675, 2)``
+donne 2,67 à cause de l'écriture binaire.
 """
 
 import math
 import re
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Context, Decimal, localcontext
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 from uncertainties import UFloat, ufloat, ufloat_fromstr
 
-from grandeurs.reglages import Notation, StyleIncertitude
+from grandeurs.reglages import Notation, StyleIncertitude, reglages
 
-__all__ = ["NombreArrondi", "Valeur", "arrondir", "lire_nombre"]
+__all__ = ["NombreArrondi", "Valeur", "arrondir", "arrondir_valeur", "lire_nombre"]
 
 Valeur: TypeAlias = float | UFloat
 
@@ -265,3 +267,29 @@ def arrondir(
     if rang > 0 and reduit.adjusted() < 6:  # entier exact : 1200, pas 1.2e3
         rang = 0
     return _construire(exact, rang, None)
+
+
+def arrondir_valeur(valeur: Any, chiffres: int | None = None) -> NombreArrondi:
+    """Arrondit un nombre (flottant ou ``ufloat``) comme l'écrivent ``texte`` et ``qty``.
+
+    Une valeur incertaine est arrondie d'après son incertitude ; une valeur
+    exacte, ou tout nombre si ``chiffres`` est donné, à ``chiffres`` chiffres
+    significatifs (par défaut le réglage ``chiffres``).
+
+    >>> arrondir_valeur(9.79828445167129).ecrire()
+    '9.80'
+    >>> arrondir_valeur(ufloat(9.79828, 0.02)).ecrire()
+    '9.80(2)'
+    """
+    r = reglages()
+    if isinstance(valeur, UFloat):
+        centre, incertitude = valeur.nominal_value, valeur.std_dev
+    else:
+        centre, incertitude = float(valeur), 0.0
+    if chiffres is not None:
+        incertitude = 0.0
+    elif not incertitude:
+        chiffres = r.chiffres
+    return arrondir(
+        centre, incertitude, chiffres_incertitude=r.chiffres_incertitude, chiffres=chiffres
+    )

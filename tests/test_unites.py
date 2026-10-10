@@ -127,6 +127,6 @@ def test_algebre_des_unites():
 def test_nombre_fois_unite_donne_une_grandeur():
     g = 3 * unit("m")
     assert isinstance(g, Grandeur)
-    assert str(g) == "3 m"
-    assert str(unit("m") * 3) == "3 m"
-    assert str(1 / unit("s")) == "1 s⁻¹"
+    assert str(g) == "3.00 m"
+    assert str(unit("m") * 3) == "3.00 m"
+    assert str(1 / unit("s")) == "1.00 s⁻¹"

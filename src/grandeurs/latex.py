@@ -8,7 +8,8 @@ la commande siunitx depuis Python, ce que font ces fonctions.
 - l'incertitude est en notation courte, « 1.20(1) » : siunitx la lit et
   l'affiche comme le demande son option ``uncertainty-mode`` ;
 - la valeur est arrondie au rang de l'incertitude (voir
-  :mod:`grandeurs.chiffres`), ou à ``chiffres`` chiffres significatifs ;
+  :mod:`grandeurs.chiffres`), ou à ``chiffres`` chiffres significatifs (le
+  réglage ``chiffres``, 3 par défaut, pour une valeur exacte) ;
 - l'exposant s'écrit ``e3`` : siunitx l'affiche « × 10³ » ;
 - la virgule décimale est en option (``decimale=","`` ou le réglage
   ``decimale``) ; siunitx lit les deux, et c'est son option
@@ -21,9 +22,8 @@ from typing import Any
 
 import numpy as np
 import pint
-from uncertainties import UFloat
 
-from grandeurs.chiffres import arrondir
+from grandeurs.chiffres import arrondir_valeur
 from grandeurs.reglages import Notation, reglages
 from grandeurs.saisie import grandeur, unit
 
@@ -36,33 +36,21 @@ def unite_siunitx(unite: Any) -> str:
 
 
 def _nombre(
-    valeur: float,
-    incertitude: float,
+    x: Any,
     *,
-    montrer_incertitude: bool | None,
+    incertitude: bool | None,
     chiffres: int | None,
     decimale: str | None,
     notation: Notation | None,
 ) -> str:
+    """Nombre (flottant ou ``ufloat``) écrit pour siunitx, incertitude en notation courte."""
     r = reglages()
-    montrer = r.afficher_incertitude if montrer_incertitude is None else montrer_incertitude
-    nombre = arrondir(
-        valeur,
-        0.0 if chiffres is not None else incertitude,
-        chiffres_incertitude=r.chiffres_incertitude,
-        chiffres=chiffres,
-    )
-    return nombre.ecrire(
+    montrer = (r.afficher_incertitude if incertitude is None else incertitude) and chiffres is None
+    return arrondir_valeur(x, chiffres).ecrire(
         notation=notation or r.notation,
         decimale=decimale or r.decimale,
-        incertitude="courte" if montrer and chiffres is None else None,
+        incertitude="courte" if montrer else None,
     )
-
-
-def _valeur_incertitude(x: Any) -> tuple[float, float]:
-    if isinstance(x, UFloat):
-        return x.nominal_value, x.std_dev
-    return float(x), 0.0
 
 
 def num(
@@ -78,14 +66,8 @@ def num(
         if not x.dimensionless:
             raise TypeError(f"{x} a une dimension : utiliser qty()")
         x = x.to("").magnitude
-    valeur, ecart = _valeur_incertitude(x)
     texte = _nombre(
-        valeur,
-        ecart,
-        montrer_incertitude=incertitude,
-        chiffres=chiffres,
-        decimale=decimale,
-        notation=notation,
+        x, incertitude=incertitude, chiffres=chiffres, decimale=decimale, notation=notation
     )
     return rf"\num{{{texte}}}"
 
@@ -111,14 +93,8 @@ def qty(
         g = g.to(unit(unite).pint_unit)
 
     def ecrire(nombre: Any) -> str:
-        valeur, ecart = _valeur_incertitude(nombre)
         return _nombre(
-            valeur,
-            ecart,
-            montrer_incertitude=incertitude,
-            chiffres=chiffres,
-            decimale=decimale,
-            notation=notation,
+            nombre, incertitude=incertitude, chiffres=chiffres, decimale=decimale, notation=notation
         )
 
     texte_unite = unit(g).latex()

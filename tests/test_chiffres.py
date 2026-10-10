@@ -1,7 +1,9 @@
+import numpy as np
 import pytest
-from uncertainties import UFloat
+from uncertainties import UFloat, ufloat
 
-from grandeurs import NombreArrondi, arrondir, lire_nombre
+from grandeurs import NombreArrondi, arrondir, lire_nombre, reglages_temporaires
+from grandeurs.chiffres import arrondir_valeur
 
 
 @pytest.mark.parametrize(
@@ -111,3 +113,21 @@ def test_ecrire_ingenieur_met_l_exposant_multiple_de_trois():
 
 def test_valeur_non_finie_ecrite_telle_quelle():
     assert arrondir(float("-inf")).ecrire() == "-inf"
+
+
+class TestArrondirValeur:
+    def test_valeur_exacte_au_reglage_chiffres(self):
+        assert arrondir_valeur(9.79828445167129).ecrire() == "9.80"
+        with reglages_temporaires(chiffres=5):
+            assert arrondir_valeur(9.79828445167129).ecrire() == "9.7983"
+
+    def test_valeur_incertaine_arrondie_d_apres_l_incertitude(self):
+        assert arrondir_valeur(ufloat(9.79828, 0.02)).ecrire() == "9.80(2)"
+        with reglages_temporaires(chiffres=5):
+            assert arrondir_valeur(ufloat(9.79828, 0.02)).ecrire() == "9.80(2)"
+
+    def test_chiffres_explicite_masque_l_incertitude(self):
+        assert arrondir_valeur(ufloat(9.79828, 0.02), chiffres=2).ecrire() == "9.8"
+
+    def test_nombre_numpy_accepte(self):
+        assert arrondir_valeur(np.float64(2.0)).ecrire() == "2.00"

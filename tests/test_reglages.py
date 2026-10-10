@@ -16,7 +16,7 @@ from grandeurs.reglages import signaler
 
 def test_reglages_par_defaut():
     r = Reglages()
-    assert (r.sans_unite, r.chiffres_significatifs, r.decimale) == ("avertissement", True, ".")
+    assert (r.sans_unite, r.chiffres, r.chiffres_significatifs) == ("avertissement", 3, True)
 
 
 @pytest.mark.parametrize(
@@ -25,6 +25,7 @@ def test_reglages_par_defaut():
         {"sans_unite": "bof"},
         {"decimale": ";"},
         {"chiffres_incertitude": 0},
+        {"chiffres": 0},
         {"notation": "sci"},
         {"style_incertitude": "long"},
     ],

@@ -33,7 +33,7 @@ import numpy as np
 import pint
 from uncertainties import UFloat, unumpy
 
-from grandeurs.chiffres import NombreArrondi, arrondir
+from grandeurs.chiffres import NombreArrondi, arrondir_valeur
 from grandeurs.reglages import Notation, StyleIncertitude, reglages
 from grandeurs.simplification import simplificateur
 from grandeurs.unites import Unite
@@ -141,16 +141,13 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
     # Écriture
 
     def arrondi(self, chiffres: int | None = None) -> NombreArrondi:
-        """Valeur arrondie d'après l'incertitude (ou à ``chiffres`` significatifs)."""
+        """Valeur arrondie d'après l'incertitude, ou à ``chiffres`` significatifs.
+
+        Une valeur exacte est arrondie au réglage ``chiffres`` (3 par défaut).
+        """
         if np.ndim(self.magnitude):
             raise TypeError("l'arrondi ne s'applique qu'à une grandeur scalaire")
-        incertitude = 0.0 if chiffres is not None else float(self.incertitude)
-        return arrondir(
-            float(self.valeur),
-            incertitude,
-            chiffres_incertitude=reglages().chiffres_incertitude,
-            chiffres=chiffres,
-        )
+        return arrondir_valeur(self.magnitude, chiffres)
 
     def texte(
         self,
@@ -161,26 +158,31 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
         notation: Notation | None = None,
         style: StyleIncertitude | None = None,
     ) -> str:
-        """Écrit la grandeur : ``(1.20 ± 0.01) m·s⁻¹``, ``1.20 m·s⁻¹``…
+        """Écrit la grandeur : ``(1.20 ± 0.01) m·s⁻¹``, ``1.20 m·s⁻¹``, ``[1.00; 2.00] m``…
 
         Les options valent par défaut les réglages (:func:`grandeurs.reglages`).
         ``chiffres`` impose un nombre de chiffres significatifs et masque alors
-        l'incertitude.
+        l'incertitude. Un tableau est écrit élément par élément, avec la même
+        règle d'arrondi, entre crochets et séparés par des points-virgules.
         """
         r = reglages()
         unite = self.unite.ecrire("texte")
         # Le SI colle °, ′ et ″ au nombre (30°), mais pas °C (20 °C).
         separateur = "" if unite in _ANGLES_COLLES else " "
-        if np.ndim(self.magnitude):
-            return f"{self.magnitude}{separateur}{unite}".rstrip()
         montrer = (r.afficher_incertitude if incertitude is None else incertitude) and not chiffres
         forme = (style or r.style_incertitude) if montrer else None
-        nombre = self.arrondi(chiffres)
-        valeur = nombre.ecrire(
-            notation=notation or r.notation, decimale=decimale or r.decimale, incertitude=forme
-        )
-        if forme == "pm" and nombre.incertitude is not None and not valeur.startswith("("):
-            valeur = f"({valeur})" if unite else valeur
+
+        def ecrire(m: Any) -> str:
+            return arrondir_valeur(m, chiffres).ecrire(
+                notation=notation or r.notation, decimale=decimale or r.decimale, incertitude=forme
+            )
+
+        if np.ndim(self.magnitude):
+            tableau = np.array2string(self.magnitude, separator="; ", formatter={"all": ecrire})
+            return f"{tableau}{separateur}{unite}".rstrip()
+        valeur = ecrire(self.magnitude)
+        if forme == "pm" and self.incertitude and not valeur.startswith("(") and unite:
+            valeur = f"({valeur})"
         return f"{valeur}{separateur}{unite}" if unite else valeur
 
     def latex(self, unite: Any = None, **options: Any) -> str:

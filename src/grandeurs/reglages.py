@@ -57,6 +57,9 @@ class Reglages:
     Attributs :
 
     - ``sans_unite`` : niveau quand une grandeur est créée sans unité ;
+    - ``chiffres`` : chiffres significatifs d'une valeur exacte à l'écriture
+      (``str``, :meth:`Grandeur.texte`, :func:`qty`, :func:`num`), 3 par
+      défaut ; une valeur incertaine est arrondie d'après son incertitude ;
     - ``chiffres_significatifs`` : une chaîne comme ``"1.20"`` porte une
       incertitude d'une unité sur son dernier chiffre ; sinon elle est exacte ;
     - ``chiffres_incertitude`` : nombre de chiffres significatifs gardés sur
@@ -70,6 +73,7 @@ class Reglages:
     """
 
     sans_unite: Niveau = "avertissement"
+    chiffres: int = 3
     chiffres_significatifs: bool = True
     chiffres_incertitude: int = 1
     afficher_incertitude: bool = True
@@ -82,8 +86,10 @@ class Reglages:
         self._verifier("style_incertitude", self.style_incertitude, get_args(StyleIncertitude))
         self._verifier("notation", self.notation, get_args(Notation))
         self._verifier("decimale", self.decimale, (".", ","))
-        if not isinstance(self.chiffres_incertitude, int) or self.chiffres_incertitude < 1:
-            raise ValueError("chiffres_incertitude doit être un entier ≥ 1")
+        for nom in ("chiffres", "chiffres_incertitude"):
+            valeur = getattr(self, nom)
+            if not isinstance(valeur, int) or valeur < 1:
+                raise ValueError(f"{nom} doit être un entier ≥ 1")
 
     @staticmethod
     def _verifier(nom: str, valeur: object, permis: tuple[object, ...]) -> None:

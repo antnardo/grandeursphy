@@ -5,6 +5,18 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 
 ## Non publié
 
+### Ajouté
+
+- Réglage `chiffres` (3 par défaut) : chiffres significatifs d'une valeur exacte
+  à l'écriture, appliqué par `str`, `texte`, `qty` et `num` ; une valeur incertaine
+  reste arrondie d'après son incertitude. `grandeurs.chiffres.arrondir_valeur` est
+  le point d'arrondi commun.
+
+### Modifié
+
+- Un tableau s'écrit élément par élément, arrondi comme un scalaire :
+  `[1.00; 2.00] m`, `[1.0 ± 0.1; 2.00 ± 0.02] m`.
+
 ### Supprimé
 
 - L'API permissive : les réglages `melange` et `lecture_nombre`, et la lecture

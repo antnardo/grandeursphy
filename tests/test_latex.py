@@ -11,7 +11,7 @@ from grandeurs import grandeur, num, qty, reglages_temporaires, unite_siunitx
     [
         (grandeur("1.20 m.s-1"), r"\qty{1.20(1)}{m.s^{-1}}"),
         (grandeur("1.20e3 kg.m-3"), r"\qty{1.20(1)e3}{kg.m^{-3}}"),
-        (grandeur(20, "°C"), r"\qty{20}{\degreeCelsius}"),
+        (grandeur(20, "°C"), r"\qty{20.0}{\degreeCelsius}"),
         (grandeur("5 µΩ"), r"\qty{5(1)}{\micro\ohm}"),
         (grandeur(9.81, "m/s2"), r"\qty{9.81}{m.s^{-2}}"),
         (cst.EPS_0, r"\qty{8.854187819(1)e-12}{F.m^{-1}}"),
@@ -36,7 +36,14 @@ def test_qty_sans_incertitude_garde_les_chiffres_significatifs():
 
 def test_qty_a_n_chiffres():
     rt = (cst.R_GP * grandeur(300, "K")).si()
-    assert qty(rt, chiffres=3) == r"\qty{2.49e3}{J.mol^{-1}}"
+    assert qty(rt) == r"\qty{2.49e3}{J.mol^{-1}}"
+    assert qty(rt, chiffres=5) == r"\qty{2494.3}{J.mol^{-1}}"
+
+
+def test_qty_et_num_suivent_le_reglage_chiffres():
+    with reglages_temporaires(chiffres=4):
+        assert qty(grandeur(9.79828445167129, "m/s2")) == r"\qty{9.798}{m.s^{-2}}"
+        assert num(6.02214076e23) == r"\num{6.022e23}"
 
 
 def test_qty_convertit_d_abord():
@@ -44,7 +51,7 @@ def test_qty_convertit_d_abord():
 
 
 def test_qty_ancienne_macro():
-    assert qty(grandeur(2, "m"), macro="SI") == r"\SI{2}{m}"
+    assert qty(grandeur(2, "m"), macro="SI") == r"\SI{2.00}{m}"
 
 
 def test_qty_d_une_chaine():
@@ -52,11 +59,11 @@ def test_qty_d_une_chaine():
 
 
 def test_qty_d_un_tableau_donne_une_liste():
-    assert qty(grandeur(np.array([1.0, 2.5]), "m")) == r"\qtylist{1;2.5}{m}"
+    assert qty(grandeur(np.array([1.0, 2.5]), "m")) == r"\qtylist{1.00;2.50}{m}"
 
 
 def test_qty_sans_unite_donne_num():
-    assert qty(grandeur(0.5, "")) == r"\num{0.5}"
+    assert qty(grandeur(0.5, "")) == r"\num{0.500}"
 
 
 def test_qty_tableau_a_deux_dimensions_refuse():
@@ -67,10 +74,10 @@ def test_qty_tableau_a_deux_dimensions_refuse():
 @pytest.mark.parametrize(
     ("x", "attendu"),
     [
-        (0.5, r"\num{0.5}"),
+        (0.5, r"\num{0.500}"),
         (ufloat(1.234, 0.012), r"\num{1.23(1)}"),
         (cst.ALPHA, r"\num{0.007297352564(1)}"),
-        (6.02214076e23, r"\num{6.02214076e23}"),
+        (6.02214076e23, r"\num{6.02e23}"),
     ],
 )
 def test_num(x, attendu):

@@ -55,7 +55,6 @@ packages = ["src/grandeurs"]
 # Le sdist ne porte que le paquet et sa documentation : ni uv.lock, ni tests.
 [tool.hatch.build.targets.sdist]
 include = ["/src", "/README.md", "/LICENSE", "/CHANGELOG.md"]
-exclude = ["/.gitignore"]
 
 [tool.ruff]
 line-length = 100

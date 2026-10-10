@@ -3,7 +3,11 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 [SemVer](https://semver.org/lang/fr/).
 
-## Non publié
+## 0.2.0 - 2026-10-10
+
+Simplification décidée par l'audit du 10 octobre 2026 : l'API permissive et
+l'algèbre des unités disparaissent, l'écriture gagne un réglage `chiffres`, `.si()`
+une table d'unités préférées, les constantes une organisation en sous-modules.
 
 ### Ajouté
 

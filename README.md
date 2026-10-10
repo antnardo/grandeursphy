@@ -105,12 +105,14 @@ micro-année et attolitre : on écrit `au` et `ly`.
 
 ### Égalité physique des unités
 
-`unit(...)` rend une `Unite`, qui enveloppe l'unité pint. Deux unités sont égales
-quand elles ont la même dimension et que la conversion de l'une vers l'autre est
-l'identité (0 donne 0, 1 donne 1) ; la règle couvre les unités affines : °C ≠ K,
-mais un écart de 1 °C vaut 1 K. On n'a pas changé l'égalité de la classe `Unit` de
-pint : pint s'en sert pour ses caches d'écriture, où « N » et « kg·m·s⁻² » doivent
-rester distincts. `Unite.identique` donne l'égalité d'écriture.
+`unit(...)` rend une `Unite`, qui enveloppe l'unité pint et ne sert qu'à deux
+choses : l'égalité physique et l'écriture (`ecrire("texte")`, `"ascii"`,
+`"siunitx"`). Deux unités sont égales (`equivalentes(a, b)`) quand elles ont la même
+dimension et que la conversion de l'une vers l'autre est l'identité (0 donne 0, 1
+donne 1) ; la règle couvre les unités affines : °C ≠ K, mais un écart de 1 °C vaut
+1 K. On n'a pas changé l'égalité de la classe `Unit` de pint : pint s'en sert pour
+ses caches d'écriture, où « N » et « kg·m·s⁻² » doivent rester distincts. Tout le
+reste (dimension, conversion, algèbre) passe par les grandeurs.
 
 Cas limites, qui viennent de la définition du SI :
 

@@ -1,6 +1,6 @@
 import pytest
 
-from grandeurs import Grandeur, Unite, unit, ureg
+from grandeurs import Unite, equivalentes, grandeur, unit, ureg
 
 
 @pytest.mark.parametrize(
@@ -30,6 +30,7 @@ from grandeurs import Grandeur, Unite, unit, ureg
 )
 def test_unites_egales_physiquement(a, b):
     assert unit(a) == unit(b)
+    assert equivalentes(a, b)
 
 
 @pytest.mark.parametrize(
@@ -59,16 +60,18 @@ def test_cas_limites_du_si_egaux(a, b):
 )
 def test_unites_differentes(a, b):
     assert unit(a) != unit(b)
+    assert not equivalentes(a, b)
 
 
 def test_egalite_avec_chaine_et_unite_pint():
     assert unit("J") == "N.m"
     assert unit("N") == ureg.Unit("kilogram * meter / second ** 2")
+    assert equivalentes(unit("N"), ureg.Unit("newton"))
 
 
-def test_identique_compare_l_ecriture():
-    assert not unit("N").identique("kg.m.s-2")
-    assert unit("N").identique("newton")
+def test_equivalentes_refuse_autre_chose_qu_une_unite():
+    with pytest.raises(TypeError, match="pas une unité"):
+        equivalentes("m", 3)
 
 
 def test_hachage_coherent_avec_l_egalite():
@@ -80,53 +83,30 @@ def test_comparaison_a_un_autre_type_est_fausse():
     assert unit("m") != "pas une unité"
 
 
-@pytest.mark.parametrize(
-    ("texte", "facteur", "decalage"),
-    [("km", 1000.0, 0.0), ("°C", 1.0, 273.15), ("°F", 5 / 9, 255.3722222222222), ("mL", 1e-6, 0.0)],
-)
-def test_facteur_et_decalage_vers_le_si(texte, facteur, decalage):
-    u = unit(texte)
-    assert u.facteur_si == pytest.approx(facteur)
-    assert u.decalage_si == pytest.approx(decalage)
-
-
-def test_unite_affine_reconnue():
-    assert unit("°C").affine
-    assert not unit("K").affine
-
-
-def test_dimension_selon_pint():
-    assert unit("m/s").dimension == "[length] / [time]"
-    assert unit("rad").sans_dimension
-
-
-def test_si_simplifie_en_unite_derivee():
-    assert unit("kg.m.s-2").si().identique("N")
+def test_unite_d_une_grandeur():
+    f = grandeur("2.0 kg") * grandeur("9.81 m.s-2")
+    assert isinstance(f.unite, Unite)
+    assert f.unite == unit("N")
+    assert grandeur(1, "km").to(unit("m")).valeur == 1000
 
 
 @pytest.mark.parametrize(
-    ("texte", "attendu"),
-    [("m.s-1", "m·s⁻¹"), ("J/(mol*K)", "J·mol⁻¹·K⁻¹"), ("L", "L"), ("°C", "°C")],
+    ("texte", "style", "attendu"),
+    [
+        ("m.s-1", "texte", "m·s⁻¹"),
+        ("J/(mol*K)", "texte", "J·mol⁻¹·K⁻¹"),
+        ("L", "texte", "L"),
+        ("°C", "texte", "°C"),
+        ("m.s-1", "ascii", "m.s-1"),
+        ("J.mol-1.K-1", "siunitx", "J.mol^{-1}.K^{-1}"),
+        ("µΩ", "siunitx", r"\micro\ohm"),
+    ],
 )
-def test_ecriture_texte(texte, attendu):
-    assert str(unit(texte)) == attendu
+def test_ecriture(texte, style, attendu):
+    assert unit(texte).ecrire(style) == attendu
 
 
-def test_repr_relisible():
+def test_str_et_repr_relisibles():
+    assert str(unit("m.s-1")) == "m·s⁻¹"
     assert repr(unit("m.s-1")) == "unit('m·s⁻¹')"
     assert eval(repr(unit("m.s-1"))) == unit("m/s")
-
-
-def test_algebre_des_unites():
-    assert unit("m") / "s" == unit("m.s-1")
-    assert unit("m") * unit("s-1") == unit("m/s")
-    assert unit("m") ** 2 == unit("m2")
-    assert isinstance(unit("m") / "s", Unite)
-
-
-def test_nombre_fois_unite_donne_une_grandeur():
-    g = 3 * unit("m")
-    assert isinstance(g, Grandeur)
-    assert str(g) == "3.00 m"
-    assert str(unit("m") * 3) == "3.00 m"
-    assert str(1 / unit("s")) == "1.00 s⁻¹"

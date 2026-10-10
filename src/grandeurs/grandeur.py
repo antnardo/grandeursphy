@@ -53,10 +53,6 @@ def _tableau_incertain(valeur: object) -> bool:
     )
 
 
-def _pint(autre: Any) -> Any:
-    return autre.pint_unit if isinstance(autre, Unite) else autre
-
-
 def _centrale(x: Any) -> Any:
     """Valeur centrale d'un nombre ou d'une grandeur incertains ; inchangé sinon."""
     if isinstance(x, Grandeur):
@@ -128,7 +124,9 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
 
     def to(self, other: Any = None, *contexts: Any, **ctx_kwargs: Any) -> "Grandeur":
         """Conversion de pint, qui accepte aussi une :class:`grandeurs.Unite`."""
-        return super().to(_pint(other), *contexts, **ctx_kwargs)  # type: ignore[no-any-return]
+        if isinstance(other, Unite):
+            other = other.pint_unit
+        return super().to(other, *contexts, **ctx_kwargs)  # type: ignore[no-any-return]
 
     def vers(self, unite: Any) -> "Grandeur":
         """Convertit dans ``unite`` : ``v.vers("km.h-1")``, ``T.vers("°C")``."""
@@ -237,17 +235,3 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
                 "chiffres ; pour l'écrire, utiliser .texte(chiffres=…) ou .arrondi()"
             )
         return super().__round__(ndigits)
-
-    # Produit par une Unite : pint ne la connaît pas, on lui passe l'unité pint.
-
-    def __mul__(self, other: Any) -> Any:
-        return super().__mul__(_pint(other))
-
-    def __rmul__(self, other: Any) -> Any:
-        return super().__rmul__(_pint(other))
-
-    def __truediv__(self, other: Any) -> Any:
-        return super().__truediv__(_pint(other))
-
-    def __rtruediv__(self, other: Any) -> Any:
-        return super().__rtruediv__(_pint(other))

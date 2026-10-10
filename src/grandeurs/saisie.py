@@ -28,7 +28,8 @@ def unit(unite: Any) -> Unite:
 
     ``unite`` est une chaîne (notation de manuel ou de pint), une
     :class:`grandeurs.Unite`, une unité pint ou une grandeur (dont on prend
-    l'unité).
+    l'unité). Sert aussi à écrire une unité (``unit("J/mol.K").ecrire("siunitx")``)
+    et à nommer celle d'une conversion (``qty(v, "km/h")``).
     """
     if isinstance(unite, Unite):
         return unite

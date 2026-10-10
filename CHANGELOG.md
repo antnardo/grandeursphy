@@ -24,6 +24,10 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 
 ### Supprimé
 
+- `Unite` réduite à l'égalité physique (`==`, `equivalentes(a, b)`) et à l'écriture
+  (`ecrire`) : `identique`, `dimension`, `affine`, `facteur_si`, `decalage_si`,
+  `si()`, `latex()` et l'algèbre des unités (`3 * unit("m")`) disparaissent ; on
+  passe par les grandeurs.
 - L'API permissive : les réglages `melange` et `lecture_nombre`, et la lecture
   d'un nombre nu dans l'unité de l'autre opérande (`12 cm + 3`). Les règles de
   pint s'appliquent : `longueur + 2` est refusé. Seul `sans_unite` reste, pour

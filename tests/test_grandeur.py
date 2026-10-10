@@ -101,10 +101,6 @@ class TestConversions:
         f = grandeur("2.0 kg") * grandeur("9.81 m.s-2")
         assert f.unite == unit("N")
 
-    def test_produit_par_une_unite(self):
-        assert str(grandeur(2, "m") * unit("s")) == "2.00 m·s"
-        assert str(grandeur(2, "m") / unit("s")) == "2.00 m·s⁻¹"
-
 
 class TestEcriture:
     @pytest.mark.parametrize(

@@ -9,6 +9,7 @@ from grandeurs import (
     grandeur,
     reglages_temporaires,
     unit,
+    ureg,
 )
 
 
@@ -27,7 +28,7 @@ from grandeurs import (
     ],
 )
 def test_unit_lit_les_notations_de_manuel(texte, nom):
-    assert unit(texte).identique(nom)
+    assert unit(texte).pint_unit == ureg.parse_units(nom)
 
 
 def test_unit_accepte_unite_pint_et_grandeur():

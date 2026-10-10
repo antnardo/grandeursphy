@@ -32,7 +32,7 @@ __all__ = ["num", "qty", "unite_siunitx"]
 
 def unite_siunitx(unite: Any) -> str:
     r"""Unité en écriture littérale de siunitx : ``"J.mol-1.K-1"`` → ``J.mol^{-1}.K^{-1}``."""
-    return unit(unite).latex()
+    return unit(unite).ecrire("siunitx")
 
 
 def _nombre(
@@ -97,7 +97,7 @@ def qty(
             nombre, incertitude=incertitude, chiffres=chiffres, decimale=decimale, notation=notation
         )
 
-    texte_unite = unit(g).latex()
+    texte_unite = unit(g).ecrire("siunitx")
     magnitude = g.magnitude
     if np.ndim(magnitude) == 1:
         valeurs = ";".join(ecrire(m) for m in magnitude)

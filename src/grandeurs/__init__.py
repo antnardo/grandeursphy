@@ -20,7 +20,7 @@ from grandeurs.reglages import (
     reglages_temporaires,
 )
 from grandeurs.saisie import grandeur, unit
-from grandeurs.unites import Unite
+from grandeurs.unites import Unite, equivalentes
 
 __all__ = [
     "DMS",
@@ -34,6 +34,7 @@ __all__ = [
     "configurer",
     "dms",
     "ecrire_angle",
+    "equivalentes",
     "grandeur",
     "lire_angle",
     "lire_nombre",

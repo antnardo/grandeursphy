@@ -14,6 +14,11 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 
 ### Modifié
 
+- `.si()` consulte une table d'unités préférées (N/m, S/m, C/kg, lm, lx, Bq, V/m,
+  A/m, H/m, F/m, Pa·s, W/(m·K), J/(kg·K), J/(mol·K)…) avant le coût minimal, qui
+  écrivait T·A pour une raideur, Ω⁻¹·m⁻¹ pour une conductivité, T⁻¹·s⁻¹ pour un
+  C/kg, cd·rad² pour un lumen et count·s⁻¹ pour un becquerel. Hz, Gy et Sv ne sont
+  jamais choisis.
 - Un tableau s'écrit élément par élément, arrondi comme un scalaire :
   `[1.00; 2.00] m`, `[1.0 ± 0.1; 2.00 ± 0.02] m`.
 

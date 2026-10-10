@@ -178,14 +178,17 @@ aléatoires ne sont égales que si leur différence est exactement nulle.
 
 `to_preferred` de pint, essayé avec les unités dérivées, écrit une accélération
 « Hz·W/N ». `.si()` suit une règle plus étroite et prévisible : passer en unités de
-base ; si la dimension ne contient ni masse ni courant, s'arrêter (m·s⁻², m²·s⁻¹,
-mol·m⁻³) ; sinon essayer chaque unité dérivée (V, Ω, S, F, H, T, Wb, C, J, W, N, Pa),
-à la puissance ±1, complétée par des unités de base, et garder l'écriture la plus
-courte. Exemples : kg·m·s⁻² → N, V/A → Ω, kg·s⁻³ → W·m⁻², N/A² → H·m⁻¹,
-J/(mol·K) → J·mol⁻¹·K⁻¹. Le hertz n'est jamais choisi : une dimension temps⁻¹ est
-une fréquence, une activité ou une vitesse angulaire, et seul l'utilisateur sait
-laquelle. De même J/kg reste m²·s⁻², N·m devient J. On convertit explicitement par
-`.vers("Hz")`, `.vers("J.kg-1")`.
+base ; si cette écriture est celle d'une unité de la table des préférées (N, Pa, J,
+W, C, V, F, Ω, S, Wb, T, H, lm, lx, Bq, N/m, C/kg, S/m, Ω·m, V/m, A/m, H/m, F/m,
+Pa·s, W/(m·K), J/(kg·K), J/(mol·K), J/K, J/mol, W/m²), l'écrire ainsi ; sinon, si
+la dimension ne contient ni masse ni courant, s'arrêter (m·s⁻², m²·s⁻¹, mol·m⁻³) ;
+sinon essayer chaque unité dérivée à la puissance ±1, complétée par des unités de
+base, et garder l'écriture la plus courte. Exemples : kg·m·s⁻² → N, V/A → Ω,
+mS/cm → S·m⁻¹, kg·s⁻² → N·m⁻¹, N/C → V·m⁻¹, kBq → Bq. Le hertz n'est jamais
+choisi : une dimension temps⁻¹ est une fréquence ou une vitesse angulaire (le radian
+est sans dimension), et seul l'utilisateur sait laquelle ; `2π rad × f` donne
+rad·s⁻¹, `1/T` donne s⁻¹. Le gray et le sievert (J/kg, soit m²·s⁻²) ne le sont pas
+non plus. On convertit explicitement par `.vers("Hz")`, `.vers("Gy")`.
 
 ### Constantes
 

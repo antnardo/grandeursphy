@@ -6,10 +6,10 @@ flottants SI), les fonctions usuelles qui propagent les incertitudes dans
 :mod:`grandeurs.fonctions`.
 """
 
-from grandeurs.angles import DMS, dms, ecrire_angle, lire_angle, ramener
+from grandeurs.angles import DMS, derouler, dms, ecrire_angle, lire_angle, ramener
 from grandeurs.chiffres import NombreArrondi, arrondir, lire_nombre
 from grandeurs.grandeur import Grandeur
-from grandeurs.latex import num, qty, unite_siunitx
+from grandeurs.latex import lire_qty, num, qty, unite_siunitx
 from grandeurs.registre import ureg
 from grandeurs.reglages import (
     Reglages,
@@ -32,12 +32,14 @@ __all__ = [
     "Unite",
     "arrondir",
     "configurer",
+    "derouler",
     "dms",
     "ecrire_angle",
     "equivalentes",
     "grandeur",
     "lire_angle",
     "lire_nombre",
+    "lire_qty",
     "num",
     "qty",
     "ramener",

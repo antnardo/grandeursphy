@@ -16,7 +16,7 @@ from collections.abc import Iterable
 from functools import lru_cache
 from typing import Any, Literal, TypeAlias
 
-__all__ = ["FormateurUnites", "Style", "formateur"]
+__all__ = ["MACROS_SIUNITX", "FormateurUnites", "Style", "formateur"]
 
 Style: TypeAlias = Literal["texte", "ascii", "siunitx"]
 
@@ -30,7 +30,8 @@ _SYMBOLES = {
     "planck_constant": "h",
 }
 
-_MACROS_SIUNITX = {
+# Symboles qui passent par une macro siunitx ; lu à l'envers par ``grandeurs.latex.lire_qty``.
+MACROS_SIUNITX = {
     "°C": r"\degreeCelsius",
     "Δ°C": r"\degreeCelsius",
     "°": r"\degree",
@@ -98,7 +99,7 @@ class FormateurUnites:
 
     @staticmethod
     def _siunitx(prefixe: str, base: str) -> str:
-        macro = _MACROS_SIUNITX.get(base, base)
+        macro = MACROS_SIUNITX.get(base, base)
         if prefixe == "µ":
             return r"\micro" + (macro if macro.startswith("\\") else " " + macro)
         return prefixe + macro

@@ -11,7 +11,9 @@ pint convertit déjà entre radians, degrés (``°``), minutes et secondes d'arc
   ``Angle``) ;
 - un signe pour l'angle entier : −10°30' vaut −10,5° (l'ancienne classe donnait
   −9,5° pour ``deg=-10, min=30``) ;
-- la réduction modulo un tour, dans [0, 360°[ ou ]−180°, 180°].
+- la réduction modulo un tour, dans [0, 360°[ ou ]−180°, 180°] (:func:`ramener`),
+  et son inverse sur une suite d'angles, le déroulement qui ôte les sauts d'un
+  tour (:func:`derouler`, comme ``numpy.unwrap``).
 
 Un nombre nu passé à ces fonctions est lu en radians, l'unité SI de l'angle
 (pint fait de même : le radian vaut 1).
@@ -27,7 +29,7 @@ import numpy as np
 from grandeurs.grandeur import Grandeur
 from grandeurs.registre import ureg
 
-__all__ = ["DMS", "dms", "ecrire_angle", "lire_angle", "ramener"]
+__all__ = ["DMS", "derouler", "dms", "ecrire_angle", "lire_angle", "ramener"]
 
 _NOMBRE = r"\d+(?:[.,]\d+)?"
 _SIGNE = r"^\s*(?P<signe>[-+−]?)\s*"
@@ -170,3 +172,18 @@ def ramener(angle: Any, symetrique: bool = False) -> Grandeur:
     if symetrique:
         reduit = reduit - (reduit.valeur > tour.valeur / 2) * tour
     return reduit  # type: ignore[no-any-return]
+
+
+def derouler(angles: Any) -> Grandeur:
+    """Déroule une suite d'angles : ajoute à chacun le nombre de tours qui efface les sauts.
+
+    L'inverse de :func:`ramener` sur une suite (une phase mesurée modulo 2π) :
+    ``[350°, 10°, 20°]`` devient ``[350°, 370°, 380°]``. Le résultat garde
+    l'unité et les incertitudes ; le nombre de tours est calculé sur les
+    valeurs centrales, comme ``numpy.unwrap``.
+    """
+    angle = _en_angle(angles)
+    tour: Any = ureg.Quantity(1, "turn").to(angle.units)
+    valeurs = np.asarray(angle.valeur, dtype=float)
+    tours = np.rint((np.unwrap(valeurs, period=tour.valeur) - valeurs) / tour.valeur)
+    return angle + tours * tour  # type: ignore[no-any-return]

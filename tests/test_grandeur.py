@@ -212,3 +212,13 @@ class TestReglesDePint:
 
 def test_valeur_est_un_flottant():
     assert not isinstance(grandeur("1.20 m").valeur, UFloat)
+
+
+@pytest.mark.parametrize(
+    "texte", ["1.20 m.s-1", "1.20e3 kg.m-3", "-0.5 K", "5 µΩ", "20.0 °C", "1.20(3) J.mol-1.K-1"]
+)
+def test_grandeur_relit_ce_que_texte_ecrit(texte):
+    g = grandeur(texte)
+    relu = grandeur(str(g))
+    assert relu.unite == g.unite
+    assert (relu.valeur, relu.incertitude) == pytest.approx((g.valeur, g.incertitude))

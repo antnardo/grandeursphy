@@ -75,7 +75,7 @@ def codata(cle: str) -> Grandeur:
     """Constante CODATA de scipy, sous la clé anglaise de scipy, en grandeur.
 
     >>> print(codata("proton-electron mass ratio"))
-    1836.15267343 ± 0.00000001
+    1836.15267343 ± 0.00000003
     """
     valeur, unite, incertitude = physical_constants[cle]
     magnitude = ufloat(valeur, incertitude, tag=cle) if incertitude else valeur

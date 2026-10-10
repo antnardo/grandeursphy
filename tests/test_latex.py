@@ -3,7 +3,7 @@ import pytest
 from uncertainties import ufloat
 
 from grandeurs import constantes as cst
-from grandeurs import grandeur, num, qty, reglages_temporaires, unite_siunitx
+from grandeurs import grandeur, lire_qty, num, qty, reglages_temporaires, unite_siunitx
 
 
 @pytest.mark.parametrize(
@@ -95,3 +95,43 @@ def test_unite_siunitx():
 
 def test_methode_latex_de_la_grandeur():
     assert grandeur("1.20 m").latex(decimale=",") == r"\qty{1,20(1)}{m}"
+
+
+@pytest.mark.parametrize(
+    ("texte", "attendu"),
+    [
+        (r"\qty{1.20(1)}{m.s^{-1}}", "(1.20 ± 0.01) m·s⁻¹"),
+        (r"\qty{1,20(1)e3}{kg.m^{-3}}", "(1.20 ± 0.01)e3 kg·m⁻³"),
+        (r"\qty{5(1)}{\micro\ohm}", "(5 ± 1) µΩ"),
+        (r"\qty{20.0}{\degreeCelsius}", "(20.0 ± 0.1) °C"),
+        (r"\qty[per-mode=symbol]{3}{\micro m}", "(3 ± 1) µm"),
+        (r"\SI{2}{k\ohm}", "(2 ± 1) kΩ"),
+        (r"\qty{1}{J.mol^{-1}.K^{-1}}", "(1 ± 1) J·mol⁻¹·K⁻¹"),
+        (r"\num{0.50}", "0.50 ± 0.01"),
+    ],
+)
+def test_lire_qty(texte, attendu):
+    assert str(lire_qty(texte)) == attendu
+
+
+@pytest.mark.parametrize("texte", [r"\qty{1}", r"\si{m}", "1.20 m"])
+def test_lire_qty_refuse_autre_chose(texte):
+    with pytest.raises(ValueError):
+        lire_qty(texte)
+
+
+@pytest.mark.parametrize(
+    "g",
+    [
+        grandeur("1.20 m.s-1"),
+        grandeur("1.20e3 kg.m-3"),
+        grandeur("5 µΩ"),
+        grandeur("20.0 °C"),
+        cst.EPS_0,
+        grandeur(9.81, "m/s2"),
+    ],
+)
+def test_lire_qty_inverse_de_qty(g):
+    relu = lire_qty(qty(g))
+    assert relu.unite == g.unite
+    assert relu.valeur == pytest.approx(g.valeur, rel=1e-9)

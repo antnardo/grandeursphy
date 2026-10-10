@@ -7,6 +7,12 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 
 ### Ajouté
 
+- Les symétriques qui manquaient : `lire_qty` relit ce que `qty` écrit
+  (`\qty{1.20(1)}{m.s^{-1}}`, `\SI`, `\num`) ; `derouler` déroule une suite
+  d'angles, l'inverse de `ramener` ; `cles_codata` liste les clés de `codata` ;
+  `equivalentes(a, b)` est l'égalité physique derrière `unit(a) == unit(b)`. Des
+  tests d'aller-retour couvrent `grandeur(str(g))`, `lire_qty(qty(g))` et
+  `derouler(ramener(…))`.
 - Réglage `chiffres` (3 par défaut) : chiffres significatifs d'une valeur exacte
   à l'écriture, appliqué par `str`, `texte`, `qty` et `num` ; une valeur incertaine
   reste arrondie d'après son incertitude. `grandeurs.chiffres.arrondir_valeur` est

@@ -16,18 +16,33 @@ la commande siunitx depuis Python, ce que font ces fonctions.
   ``output-decimal-marker`` qui décide de l'affichage ;
 - l'unité est littérale, comme dans les documents existants (``kg.m^{-3}``,
   ``\micro m``, ``k\ohm``).
+
+:func:`lire_qty` fait le chemin inverse : ``\qty{1.20(1)}{m.s^{-1}}`` redevient
+une grandeur, pour relire une valeur écrite dans un énoncé ou un corrigé.
 """
 
+import re
 from typing import Any
 
 import numpy as np
 import pint
 
+from grandeurs.affichage import MACROS_SIUNITX
 from grandeurs.chiffres import arrondir_valeur
+from grandeurs.grandeur import Grandeur
 from grandeurs.reglages import Notation, reglages
 from grandeurs.saisie import grandeur, unit
 
-__all__ = ["num", "qty", "unite_siunitx"]
+__all__ = ["lire_qty", "num", "qty", "unite_siunitx"]
+
+_COMMANDE = re.compile(
+    r"\\(?P<macro>qty|SI|num)\s*(?:\[[^\]]*\])?\s*\{(?P<nombre>[^{}]*)\}(?:\s*\{(?P<unite>[^{}]*(?:\{[^{}]*\}[^{}]*)*)\})?"
+)
+_MACRO_UNITE = re.compile(r"\\(micro|[A-Za-z]+)\s*")
+# À l'envers, le premier symbole d'une macro l'emporte (°C plutôt que Δ°C).
+_SYMBOLES_SIUNITX: dict[str, str] = {}
+for _symbole, _macro in MACROS_SIUNITX.items():
+    _SYMBOLES_SIUNITX.setdefault(_macro, _symbole)
 
 
 def unite_siunitx(unite: Any) -> str:
@@ -109,3 +124,34 @@ def qty(
     if not texte_unite:
         return rf"\num{{{texte}}}"
     return rf"\{macro}{{{texte}}}{{{texte_unite}}}"
+
+
+def _unite_de_siunitx(texte: str) -> str:
+    """Unité littérale de siunitx en notation de manuel : ``m.s^{-1}`` → ``m.s^(-1)``."""
+
+    def symbole(macro: re.Match[str]) -> str:
+        nom = "\\" + macro.group(1)
+        if nom == "\\micro":
+            return "µ"
+        if nom not in _SYMBOLES_SIUNITX:
+            raise ValueError(f"macro siunitx inconnue : {nom}")
+        return _SYMBOLES_SIUNITX[nom]
+
+    return _MACRO_UNITE.sub(symbole, texte).replace("^{", "^(").replace("}", ")")
+
+
+def lire_qty(texte: str) -> Grandeur:
+    r"""Lit ``\qty{1.20(1)}{m.s^{-1}}``, ``\SI{…}{…}`` ou ``\num{…}`` ; l'inverse de :func:`qty`.
+
+    Le nombre est lu comme par :func:`grandeurs.grandeur` (incertitude courte,
+    virgule, exposant ``e3``), l'unité littérale de siunitx est retraduite
+    (``^{-1}``, ``\micro``, ``\ohm``, ``\degreeCelsius``…).
+
+    >>> print(lire_qty(r"\qty{1,20(1)e3}{kg.m^{-3}}"))
+    (1.20 ± 0.01)e3 kg·m⁻³
+    """
+    lu = _COMMANDE.fullmatch(texte.strip())
+    if lu is None or (lu.group("macro") == "num") == (lu.group("unite") is not None):
+        raise ValueError(f"commande siunitx illisible : {texte!r}")
+    unite = _unite_de_siunitx(lu.group("unite") or "")
+    return grandeur(lu.group("nombre").strip(), unite)

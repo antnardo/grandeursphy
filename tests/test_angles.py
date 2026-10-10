@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from grandeurs import DMS, dms, ecrire_angle, grandeur, lire_angle, ramener, unit
+from grandeurs import DMS, derouler, dms, ecrire_angle, grandeur, lire_angle, ramener, unit
 
 
 @pytest.mark.parametrize(
@@ -87,3 +87,24 @@ def test_ramener_modulo_un_tour(degres, symetrique, attendu):
 
 def test_ramener_garde_l_unite():
     assert ramener(grandeur(7, "rad")).vers("rad").valeur == pytest.approx(7 - 2 * math.pi)
+
+
+def test_derouler_efface_les_sauts_d_un_tour():
+    phase = derouler(grandeur([350.0, 10.0, 20.0, -170.0], "°"))
+    assert phase.unite == unit("°")
+    assert list(phase.valeur) == [350.0, 370.0, 380.0, 550.0]
+
+
+def test_derouler_garde_les_incertitudes():
+    phase = derouler(grandeur([350.0, 10.0], "°", incertitude=1.0))
+    assert list(phase.valeur) == [350.0, 370.0]
+    assert list(phase.incertitude) == [1.0, 1.0]
+
+
+def test_derouler_en_radians_par_defaut():
+    assert derouler([6.0, 0.1]).valeur[1] == pytest.approx(0.1 + 2 * math.pi)
+
+
+def test_derouler_inverse_de_ramener():
+    phase = grandeur([10.0, 100.0, 190.0, 280.0, 370.0], "°")
+    assert list(derouler(ramener(phase)).valeur) == pytest.approx(list(phase.valeur))

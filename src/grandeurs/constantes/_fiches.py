@@ -118,8 +118,8 @@ def deduite(nom: str, valeur: Any, description: str, source: str) -> Grandeur:
 def decrire(nom: str) -> str:
     """Description, valeur et source d'une constante, sur une ligne.
 
-    >>> decrire("T0")
-    'T0 = 273 K : zéro de l'échelle Celsius (définition de l'échelle Celsius)'
+    >>> print(decrire("T0"))
+    T0 = 273 K : zéro de l'échelle Celsius (définition de l'échelle Celsius)
     """
     fiche = FICHES[nom]
     return f"{nom} = {fiche.grandeur} : {fiche.description} ({fiche.source})"

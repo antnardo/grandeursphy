@@ -20,6 +20,14 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 
 ### Modifié
 
+- La suite de tests exécute les doctests des modules (`--doctest-modules`) ; le
+  doctest de `codata` était faux. Un test d'intégration (`tests/test_pythontex.py`,
+  marqué `latex`) compile un document pythontex minimal, sauté sans `lualatex` ou
+  `pythontex`.
+- Le sdist ne contient plus `uv.lock` ni `tests/` ; la version vit dans
+  `grandeurs.__version__`. Intégration continue (`.github/workflows/ci.yml` :
+  pytest sous 3.11 et 3.14, ruff, mypy, `uv build`) et publication des artefacts
+  sur la release GitHub (`publish.yml`), sans PyPI.
 - `grandeurs.constantes` devient un paquet : le module principal garde les
   constantes fondamentales et les unités en usage avec le SI ; `constantes.astro`,
   `constantes.cgs` et `constantes.us` reçoivent l'astronomie, le CGS et les unités

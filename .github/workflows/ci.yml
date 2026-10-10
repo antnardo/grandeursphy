@@ -1,0 +1,56 @@
+# À chaque push et pull request : la suite de tests (doctests compris) sous les
+# deux Python extrêmes pris en charge — pint 0.25 sous 3.11, 0.26 au-delà —,
+# le test d'intégration pythontex quand TeX Live est là (sauté sinon), ruff et
+# mypy, et la construction de la roue et du sdist.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+      # lualatex, siunitx et pythontex pour tests/test_pythontex.py ; sans eux,
+      # le test est sauté.
+      - name: TeX Live (optionnel)
+        continue-on-error: true
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends texlive-luatex texlive-latex-recommended texlive-latex-extra texlive-science
+      - name: Tests sous Python ${{ matrix.python }}
+        run: uv run --python ${{ matrix.python }} pytest
+
+  qualite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+      - run: uv run ruff check src tests
+      - run: uv run ruff format --check src tests
+      - run: uv run mypy
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+      - run: uv build
+      - run: uvx twine check dist/*

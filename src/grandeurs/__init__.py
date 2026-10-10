@@ -6,6 +6,8 @@ flottants SI), les fonctions usuelles qui propagent les incertitudes dans
 :mod:`grandeurs.fonctions`.
 """
 
+__version__ = "0.2.0"
+
 from grandeurs.angles import DMS, derouler, dms, ecrire_angle, lire_angle, ramener
 from grandeurs.chiffres import NombreArrondi, arrondir, lire_nombre
 from grandeurs.grandeur import Grandeur
@@ -30,6 +32,7 @@ __all__ = [
     "SansUniteError",
     "SansUniteWarning",
     "Unite",
+    "__version__",
     "arrondir",
     "configurer",
     "derouler",

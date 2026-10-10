@@ -1,14 +1,26 @@
 [project]
 name = "grandeursphy"
-version = "0.1.0"
-description = "Grandeurs physiques avec unités, constantes, chiffres significatifs et sortie siunitx, au-dessus de pint"
+dynamic = ["version"]
+description = "Grandeurs physiques avec unités, incertitudes, chiffres significatifs, constantes et sortie siunitx, au-dessus de pint"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Antonin Marchand" }]
+keywords = ["physique", "unités", "incertitudes", "siunitx", "pythontex", "constantes", "enseignement"]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: French",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Education",
     "Topic :: Scientific/Engineering :: Physics",
     "Typing :: Typed",
 ]
@@ -19,15 +31,31 @@ dependencies = [
     "uncertainties>=3.2",
 ]
 
+[project.urls]
+Homepage = "https://github.com/antnardo/grandeursphy"
+Repository = "https://github.com/antnardo/grandeursphy"
+Issues = "https://github.com/antnardo/grandeursphy/issues"
+Changelog = "https://github.com/antnardo/grandeursphy/blob/main/CHANGELOG.md"
+
 [dependency-groups]
-dev = ["pytest", "ruff", "mypy"]
+dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.11"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# La version vit dans le module : une seule source, que la publication compare
+# à l'étiquette de la release.
+[tool.hatch.version]
+path = "src/grandeurs/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/grandeurs"]
+
+# Le sdist ne porte que le paquet et sa documentation : ni uv.lock, ni tests.
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/README.md", "/LICENSE", "/CHANGELOG.md"]
+exclude = ["/.gitignore"]
 
 [tool.ruff]
 line-length = 100
@@ -42,8 +70,13 @@ ignore = ["RUF001", "RUF002", "RUF003"]
 "src/grandeurs/constantes/__init__.py" = ["N816"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "-q --strict-markers"
+minversion = "8.0"
+testpaths = ["tests", "src"]
+# Les doctests des modules font partie de la suite.
+addopts = "-q --strict-markers --doctest-modules"
+markers = [
+    "latex: compile un document pythontex minimal (demande lualatex et pythontex)",
+]
 # Un avertissement inattendu (dont SansUniteWarning) fait échouer le test.
 filterwarnings = ["error"]
 

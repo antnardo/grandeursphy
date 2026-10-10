@@ -1,15 +1,9 @@
 import numpy as np
 import pytest
+from pint import DimensionalityError
 from uncertainties import UFloat
 
-from grandeurs import (
-    Grandeur,
-    SansUniteError,
-    SansUniteWarning,
-    grandeur,
-    reglages_temporaires,
-    unit,
-)
+from grandeurs import Grandeur, grandeur, reglages_temporaires, unit
 
 
 class TestValeurEtIncertitude:
@@ -165,79 +159,43 @@ class TestEcriture:
             grandeur(np.array([1.0, 2.0]), "m").arrondi()
 
 
-class TestNombresNus:
-    def test_addition_lit_le_nombre_dans_l_unite_de_l_autre(self):
-        with pytest.warns(SansUniteWarning, match="lu en cm"):
-            s = grandeur("12 cm") + 3
-        assert str(s) == "(15 ± 1) cm"
-
-    def test_lecture_si(self, silence):
-        with reglages_temporaires(lecture_nombre="si"):
-            assert (grandeur(12, "cm") + 3).vers("m").valeur == pytest.approx(3.12)
+class TestReglesDePint:
+    """Les règles de pint restent entières : aucun nombre nu n'est lu dans une unité."""
 
     @pytest.mark.parametrize(
-        ("calcul", "attendu"),
+        "calcul",
         [
-            (lambda lg: 3 + lg, 15),
-            (lambda lg: lg - 3, 9),
-            (lambda lg: 3 - lg, -9),
-            (lambda lg: np.add(lg, 3), 15),
-            (lambda lg: np.subtract(3, lg), -9),
+            lambda lg: lg + 3,
+            lambda lg: 3 - lg,
+            lambda lg: lg < 13,
+            lambda lg: np.add(lg, 3),
         ],
     )
-    def test_operations_dans_les_deux_sens(self, silence, calcul, attendu):
-        resultat = calcul(grandeur(12, "cm"))
-        assert resultat.unite == unit("cm")
-        assert resultat.valeur == attendu
+    def test_nombre_nu_refuse(self, calcul):
+        # pint lève DimensionalityError pour une somme, ValueError pour une comparaison.
+        with pytest.raises((DimensionalityError, ValueError)):
+            calcul(grandeur(12, "cm"))
 
-    def test_grandeur_sans_unite_traitee_comme_un_nombre(self, silence):
-        assert (grandeur(3) + grandeur(12, "cm")).valeur == 15
-
-    def test_ecart_de_temperature(self, silence):
-        assert str(grandeur(20, "°C") + 5) == "25 °C"
-        with reglages_temporaires(lecture_nombre="si"):
-            assert str(grandeur(20, "°C") + 5) == "25 °C"
-
-    def test_comparaisons(self, silence):
-        longueur = grandeur("12 cm")
-        assert longueur < 13
-        assert 13 > longueur  # noqa: SIM300 - comparaison dans l'autre sens
-        assert np.less(longueur, 13)
-        assert grandeur(20, "°C") < 30
-
-    def test_comparaison_lecture_si(self, silence):
-        with reglages_temporaires(lecture_nombre="si"):
-            assert grandeur(20, "°C") > 290
-
-    def test_zero_passe_sans_avertissement(self):
+    def test_zero_passe_comme_dans_pint(self):
         assert sum([grandeur(1, "m"), grandeur(2, "m")]).valeur == 3
         assert grandeur(1, "m") > 0
-
-    def test_tableau_en_place(self, silence):
-        x = grandeur(np.array([1.0, 2.0]), "m")
-        x += 1
-        assert list(x.valeur) == [2.0, 3.0]
-
-    def test_niveau_erreur_refuse(self):
-        with reglages_temporaires(melange="erreur"), pytest.raises(SansUniteError):
-            grandeur(12, "cm") + 3
 
     def test_egalite_reste_celle_de_pint(self):
         assert grandeur(1, "m") != 1
 
-    def test_dimensions_incompatibles_toujours_refusees(self):
-        from pint import DimensionalityError
-
+    def test_dimensions_incompatibles_refusees(self):
         with pytest.raises(DimensionalityError):
             grandeur(1, "m") + grandeur(1, "s")
 
-    def test_grandeur_avec_unite_d_angle_n_est_pas_un_nombre_nu(self):
-        from pint import DimensionalityError
+    def test_grandeur_sans_dimension_est_un_nombre(self, silence):
+        assert (grandeur(3) + 2).valeur == 5
+        assert (grandeur(1, "m") / grandeur(2, "m") + 1).valeur == 1.5
 
-        with pytest.raises(DimensionalityError):
-            grandeur(1, "m") + grandeur(1, "rad")
+    def test_comparaisons_sur_les_valeurs_centrales(self):
+        assert grandeur("1.20 m") < grandeur("1.21 m")
+        assert grandeur("1.20 m") <= grandeur("1.20 m")
+        assert grandeur(20, "°C") < grandeur(30, "°C")
 
 
-def test_comparaison_sur_valeurs_centrales_sans_avertissement():
-    assert grandeur("1.20 m") < grandeur("1.21 m")
+def test_valeur_est_un_flottant():
     assert not isinstance(grandeur("1.20 m").valeur, UFloat)

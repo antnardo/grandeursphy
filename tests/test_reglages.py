@@ -7,27 +7,22 @@ from grandeurs import (
     SansUniteError,
     SansUniteWarning,
     configurer,
+    grandeur,
     reglages,
     reglages_temporaires,
 )
 from grandeurs.reglages import signaler
 
 
-def test_reglages_par_defaut_permissifs_avec_avertissement():
+def test_reglages_par_defaut():
     r = Reglages()
-    assert (r.sans_unite, r.melange, r.lecture_nombre) == (
-        "avertissement",
-        "avertissement",
-        "unite",
-    )
+    assert (r.sans_unite, r.chiffres_significatifs, r.decimale) == ("avertissement", True, ".")
 
 
 @pytest.mark.parametrize(
     "champs",
     [
         {"sans_unite": "bof"},
-        {"melange": "warning"},
-        {"lecture_nombre": "SI"},
         {"decimale": ";"},
         {"chiffres_incertitude": 0},
         {"notation": "sci"},
@@ -50,9 +45,9 @@ def test_configurer_rend_les_reglages_precedents():
 
 def test_reglages_temporaires_restaurent_l_etat():
     avant = reglages()
-    with reglages_temporaires(melange="erreur") as r:
-        assert r.melange == "erreur"
-        assert reglages().melange == "erreur"
+    with reglages_temporaires(sans_unite="erreur") as r:
+        assert r.sans_unite == "erreur"
+        assert reglages().sans_unite == "erreur"
     assert reglages() == avant
 
 
@@ -76,7 +71,7 @@ def test_signaler_avertissement_emet_sans_unite_warning():
 
 def test_avertissement_designe_la_ligne_de_l_utilisateur():
     with pytest.warns(SansUniteWarning) as releve:
-        signaler("avertissement", "oubli")
+        grandeur(3)
     assert releve[0].filename == __file__
 
 

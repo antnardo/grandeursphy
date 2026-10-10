@@ -3,6 +3,16 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 [SemVer](https://semver.org/lang/fr/).
 
+## Non publié
+
+### Supprimé
+
+- L'API permissive : les réglages `melange` et `lecture_nombre`, et la lecture
+  d'un nombre nu dans l'unité de l'autre opérande (`12 cm + 3`). Les règles de
+  pint s'appliquent : `longueur + 2` est refusé. Seul `sans_unite` reste, pour
+  une grandeur créée sans unité. L'avertissement désigne la ligne qui a appelé
+  `grandeur(...)`, sans parcours de la pile.
+
 ## 0.1.0 - 2026-10-08
 
 Première version du paquet `grandeurs`, qui fusionne les anciens paquets `cs`,

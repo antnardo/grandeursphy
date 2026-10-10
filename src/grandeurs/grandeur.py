@@ -1,4 +1,4 @@
-"""La grandeur physique : une quantité pint, plus incertitude, écriture et tolérance.
+"""La grandeur physique : une quantité pint, plus incertitude et écriture.
 
 Pourquoi une sous-classe de la ``Quantity`` de pint plutôt qu'une classe à part
 qui l'envelopperait : une grandeur *est* alors une quantité pint. Conversions,
@@ -17,17 +17,15 @@ Ce qui est ajouté :
   (:meth:`texte`, ``str``), sortie siunitx (:meth:`latex`) ;
 - la simplification en SI avec unités dérivées (:meth:`si`) et la conversion
   dans une unité écrite comme dans un manuel (:meth:`vers`) ;
-- la tolérance envers les nombres nus. pint refuse ``longueur + 2`` ; ici le
-  nombre est lu dans une unité (celle de l'autre opérande, ou l'unité SI, selon
-  ``reglages().lecture_nombre``), avec un avertissement selon
-  ``reglages().melange``. Un nombre nu est un nombre Python ou numpy, un
-  ``ufloat``, ou une grandeur sans aucune unité (créée sans unité, ou rapport de
-  deux grandeurs de même unité). Le zéro passe toujours sans avertissement,
-  comme dans pint, pour que ``sum(grandeurs)`` fonctionne. L'égalité ``==``
-  reste celle de pint : 1 m n'est pas le nombre 1.
+- les opérations qu'``uncertainties`` déprécie sur ses nombres : les
+  comparaisons d'ordre portent sur les valeurs centrales, ``abs`` change le
+  signe des valeurs centrales négatives, ``round`` refuse une grandeur
+  incertaine.
+
+Les règles de pint restent entières : ``longueur + 2`` est refusé, 1 m n'est
+pas le nombre 1, deux dimensions incompatibles ne s'additionnent pas.
 """
 
-import reprlib
 from collections.abc import Callable
 from typing import Any
 
@@ -36,14 +34,12 @@ import pint
 from uncertainties import UFloat, unumpy
 
 from grandeurs.chiffres import NombreArrondi, arrondir
-from grandeurs.reglages import Notation, StyleIncertitude, reglages, signaler
+from grandeurs.reglages import Notation, StyleIncertitude, reglages
 from grandeurs.simplification import simplificateur
 from grandeurs.unites import Unite
 
 __all__ = ["Grandeur"]
 
-_ADDITIVES = frozenset({"add", "subtract"})
-_COMPARAISONS = frozenset({"less", "less_equal", "greater", "greater_equal"})
 _CODES_PINT = frozenset("~PLHCDx")
 _ANGLES_COLLES = frozenset({"°", "′", "″"})
 
@@ -55,16 +51,6 @@ def _tableau_incertain(valeur: object) -> bool:
         and valeur.size > 0
         and isinstance(valeur.flat[0], UFloat)
     )
-
-
-def _nul(valeur: object) -> bool:
-    """Zéro ou NaN (scalaire ou tableau), que pint accepte avec toute unité."""
-    if isinstance(valeur, UFloat):
-        return False
-    tableau = np.asarray(valeur)
-    if tableau.dtype.kind not in "biuf":
-        return False
-    return bool(np.all((tableau == 0) | np.isnan(tableau)))
 
 
 def _pint(autre: Any) -> Any:
@@ -142,9 +128,7 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
 
     def to(self, other: Any = None, *contexts: Any, **ctx_kwargs: Any) -> "Grandeur":
         """Conversion de pint, qui accepte aussi une :class:`grandeurs.Unite`."""
-        if isinstance(other, Unite):
-            other = other.pint_unit
-        return super().to(other, *contexts, **ctx_kwargs)  # type: ignore[no-any-return]
+        return super().to(_pint(other), *contexts, **ctx_kwargs)  # type: ignore[no-any-return]
 
     def vers(self, unite: Any) -> "Grandeur":
         """Convertit dans ``unite`` : ``v.vers("km.h-1")``, ``T.vers("°C")``."""
@@ -219,58 +203,7 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
     def __repr__(self) -> str:
         return f'Grandeur({self._magnitude!r}, "{self._units}")'
 
-    # Tolérance aux nombres nus
-
-    def _sans_unite(self) -> bool:
-        return bool(self.dimensionless and not self._units)
-
-    def _nombre_nu(self, autre: object) -> bool:
-        """``autre`` est-il un nombre sans unité non nul, face à une grandeur qui en a une ?"""
-        if self.dimensionless:
-            return False
-        if isinstance(autre, pint.Quantity):
-            return isinstance(autre, Grandeur) and autre._sans_unite() and not _nul(autre.magnitude)
-        if isinstance(autre, (int, float, complex, np.number, np.ndarray, UFloat)):
-            return not _nul(autre)
-        return False
-
-    def _lire(self, nombre: object, *, ecart: bool) -> "Grandeur":
-        """Donne au nombre nu l'unité choisie par les réglages, et le signale.
-
-        Dans une addition (``ecart``), un nombre ajouté à une unité affine est
-        un écart : 20 °C + 5 donne 25 °C, et non une somme de deux températures.
-        """
-        r = reglages()
-        magnitude = nombre.magnitude if isinstance(nombre, pint.Quantity) else nombre
-        quantite: Any = self._REGISTRY.Quantity
-        if r.lecture_nombre == "unite":
-            lu = quantite(magnitude, self._units)
-        else:
-            lu = quantite(magnitude, self.to_base_units()._units)
-        if ecart and not self._is_multiplicative:
-            delta = self._REGISTRY.UnitsContainer(
-                {f"delta_{nom}": p for nom, p in self._units.items()}
-            )
-            lu = quantite(magnitude, delta) if r.lecture_nombre == "unite" else lu.to(delta)
-        apercu = reprlib.repr(magnitude)
-        signaler(
-            r.melange,
-            f"nombre sans unité {apercu} lu en {Unite(lu.units)} "
-            f"face à une grandeur en {self.unite} (lecture_nombre={r.lecture_nombre!r})",
-        )
-        return lu  # type: ignore[no-any-return]
-
-    def _add_sub(self, other: Any, op: Callable[[Any, Any], Any]) -> Any:
-        if self._nombre_nu(other):
-            other = self._lire(other, ecart=True)
-        elif isinstance(other, Grandeur) and other._nombre_nu(self):
-            return other._lire(self, ecart=True)._add_sub(other, op)
-        return super()._add_sub(other, op)
-
-    def _iadd_sub(self, other: Any, op: Callable[[Any, Any], Any]) -> Any:
-        if self._nombre_nu(other):
-            other = self._lire(other, ecart=True)
-        return super()._iadd_sub(other, op)
+    # Opérations qu'uncertainties déprécie sur ses nombres
 
     def compare(self, other: Any, op: Callable[[Any, Any], Any]) -> Any:
         """Comparaison d'ordre, sur les valeurs centrales.
@@ -279,19 +212,7 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
         déprécié) : on compare donc les valeurs centrales, ce que faisait
         ``uncertainties`` lui-même.
         """
-        if self._nombre_nu(other):
-            other = self._lire(other, ecart=False)
-        elif isinstance(other, Grandeur) and other._nombre_nu(self):
-            return other._lire(self, ecart=False).compare(other, op)
         return super(Grandeur, _centrale(self)).compare(_centrale(other), op)
-
-    def __array_ufunc__(self, ufunc: Any, method: str, *inputs: Any, **kwargs: Any) -> Any:
-        nom = getattr(ufunc, "__name__", "")
-        if method == "__call__" and len(inputs) == 2 and nom in _ADDITIVES | _COMPARAISONS:
-            inputs = self._accorder(inputs, ecart=nom in _ADDITIVES)
-            if nom in _COMPARAISONS:
-                inputs = tuple(_centrale(x) for x in inputs)
-        return super().__array_ufunc__(ufunc, method, *inputs, **kwargs)
 
     def __abs__(self) -> Any:
         """Valeur absolue ; ``uncertainties`` déprécie ``abs`` sur un ``ufloat``.
@@ -328,13 +249,3 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
 
     def __rtruediv__(self, other: Any) -> Any:
         return super().__rtruediv__(_pint(other))
-
-    @staticmethod
-    def _accorder(operandes: tuple[Any, Any], *, ecart: bool) -> tuple[Any, Any]:
-        """Lit dans l'unité de l'autre l'opérande nu d'une fonction numpy binaire."""
-        a, b = operandes
-        if isinstance(a, Grandeur) and a._nombre_nu(b):
-            return a, a._lire(b, ecart=ecart)
-        if isinstance(b, Grandeur) and b._nombre_nu(a):
-            return b._lire(a, ecart=ecart), b
-        return a, b

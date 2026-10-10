@@ -59,7 +59,6 @@ manquait, et que ce paquet ajoute :
 - la lecture des notations françaises : pint refuse `m.s-1` ;
 - l'égalité physique des unités : pour pint, `Unit("N") == Unit("kg*m/s**2")` est
   faux ;
-- une API permissive envers les unités oubliées ;
 - les chiffres significatifs d'après l'écriture (« 1.20 ») et l'arrondi de
   l'affichage d'après l'incertitude ;
 - une simplification en SI qui choisit les unités dérivées (N, J, W, V, Ω…) ;
@@ -125,19 +124,19 @@ Cas limites, qui viennent de la définition du SI :
 | `unit("°C") == unit("K")` | `False` | 0 °C ≠ 0 K |
 | `unit("delta_degC") == unit("K")` | `True` | un écart de 1 °C vaut 1 K |
 
-### API permissive et réglages
+### Réglages
 
-Une valeur dont on a oublié l'unité passe, sans dimension, et l'oubli est signalé
-selon les réglages : un corrigé ne s'arrête pas sur un oubli, mais l'oubli se voit.
-Les réglages sont un objet figé (`Reglages`) qu'on change par
-`configurer(**champs)` ou, le temps d'un bloc, par
-`with reglages_temporaires(**champs):`.
+Une grandeur créée sans unité (`grandeur(3)`) est presque toujours un oubli : elle
+passe, sans dimension, et l'oubli est signalé selon le réglage `sans_unite` ; pour
+une grandeur réellement sans dimension, on l'écrit, `grandeur(0.5, "")`. Tout le
+reste suit les règles de pint : `longueur + 2` est refusé, 1 m n'est pas le nombre
+1, deux dimensions incompatibles ne s'additionnent pas. Les réglages sont un objet
+figé (`Reglages`) qu'on change par `configurer(**champs)` ou, le temps d'un bloc,
+par `with reglages_temporaires(**champs):`.
 
 | Réglage | Défaut | Rôle |
 | --- | --- | --- |
 | `sans_unite` | `"avertissement"` | grandeur créée sans unité : `"silence"`, `"avertissement"` ou `"erreur"` |
-| `melange` | `"avertissement"` | nombre nu ajouté, soustrait ou comparé à une grandeur qui a une unité |
-| `lecture_nombre` | `"unite"` | ce nombre est lu dans l'unité de l'autre opérande (`"unite"`) ou en SI (`"si"`) |
 | `chiffres_significatifs` | `True` | « 1.20 » porte une incertitude de 0,01 ; sinon il est exact |
 | `chiffres_incertitude` | `1` | chiffres significatifs gardés sur l'incertitude à l'affichage |
 | `afficher_incertitude` | `True` | sinon, valeur seule, arrondie à ses chiffres significatifs |
@@ -146,25 +145,7 @@ Les réglages sont un objet figé (`Reglages`) qu'on change par
 | `notation` | `"auto"` | `"fixe"`, `"scientifique"`, `"ingenieur"` |
 
 L'avertissement est un `SansUniteWarning`, que le module `warnings` filtre comme
-tout avertissement, et il désigne la ligne de l'utilisateur. L'erreur est une
-`SansUniteError`.
-
-```python
-from grandeurs import grandeur, reglages_temporaires
-
-L = grandeur("12 cm")
-L + 3        # (15 ± 1) cm, avec SansUniteWarning
-with reglages_temporaires(lecture_nombre="si", melange="silence"):
-    L + 3    # (312 ± 1) cm : 3 est lu en mètres
-grandeur(20, "°C") + 5   # 25 °C : ajouté à une température, un nombre est un écart
-```
-
-Est un « nombre nu » : un nombre Python ou numpy, un tableau, un `ufloat`, ou une
-grandeur sans aucune unité (créée sans unité, ou rapport de deux grandeurs de même
-unité) ; une grandeur en radians ou en pourcentage n'en est pas un. Le zéro passe
-toujours sans avertissement, comme dans pint, pour que `sum(grandeurs)` fonctionne.
-L'égalité `==` reste celle de pint : 1 m n'est pas le nombre 1. Les fonctions numpy
-`add`, `subtract` et les comparaisons suivent la même règle.
+tout avertissement ; l'erreur est une `SansUniteError`.
 
 ### Incertitudes et chiffres significatifs
 

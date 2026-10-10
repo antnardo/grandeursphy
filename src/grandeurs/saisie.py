@@ -2,10 +2,9 @@
 
 ``grandeur`` accepte toutes les écritures courantes et les ramène à une
 :class:`grandeurs.Grandeur` du registre unique. Une valeur sans unité est
-acceptée, sans dimension, avec le niveau d'alerte ``reglages().sans_unite`` :
-c'est la partie « permissive » de l'API. Pour une grandeur réellement sans
-dimension, on le dit : ``grandeur(0.5, "")`` ou ``grandeur(0.5, "1")`` ne
-déclenchent rien.
+acceptée, sans dimension, et l'oubli est signalé selon ``reglages().sans_unite``.
+Pour une grandeur réellement sans dimension, on le dit : ``grandeur(0.5, "")``
+ou ``grandeur(0.5, "1")`` ne déclenchent rien.
 """
 
 import reprlib

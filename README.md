@@ -197,51 +197,44 @@ non plus. On convertit explicitement par `.vers("Hz")`, `.vers("Gy")`.
 `grandeurs.constantes` donne les constantes en grandeurs, `grandeurs.flottants` les
 mêmes noms en flottants SI (valeur centrale en unités de base). Les corrigés
 existants calculent en flottants et formatent le résultat : ils importent
-`grandeurs.flottants`, et leurs résultats ne changent pas. `decrire("G")` donne la
-description et la source d'une constante, `FICHES` les recense toutes, `codata(clé)`
-rend n'importe quelle constante de scipy en grandeur.
+`grandeurs.flottants`, et leurs résultats ne changent pas. Le module principal
+tient les constantes fondamentales et les unités en usage avec le SI ; trois
+sous-modules, miroités dans `flottants`, tiennent le reste : `constantes.astro`
+(UAI, Soleil, Terre, Lune), `constantes.cgs`, `constantes.us` (unités
+anglo-saxonnes). `decrire("G")` donne la description et la source d'une constante,
+`FICHES` les recense toutes, `codata(clé)` rend n'importe quelle constante de scipy
+en grandeur et `cles_codata("Rydberg")` liste les clés.
 
-| Groupe | Source |
-| --- | --- |
-| c, h, e, k, N_A, ΔνCs, K_cd et ce qui s'en déduit (ħ, R, F, K_J, R_K…) | CODATA 2022, exactes |
-| G, ε₀, μ₀, α, masses, magnétons, Rydberg, Planck… | CODATA 2022 par scipy |
-| R☉, L☉, S☉, T☉, (GM)☉, (GM)⊕ | UAI 2015, résolution B3 (nominales) |
-| ua, pc, année julienne, année-lumière | UAI 2012 B2, UAI 2015 B2 |
-| M☉, M⊕ | (GM)/G, avec l'incertitude de G |
-| R⊕, aplatissement | WGS 84 |
-| orbite terrestre (a, e) | Standish, JPL, positions approchées des planètes |
-| Lune : masse, rayon, orbite | rapport des masses UAI 2009, rayon UAI/WGCCRE, NASA |
-| masse du W | Particle Data Group 2024 |
-| H₀ | Planck 2018 |
-| unités CGS, anglo-saxonnes, hors SI | brochure SI du BIPM, NIST Handbook 44 |
+| Groupe | Module | Source |
+| --- | --- | --- |
+| c, h, e, k, N_A, ΔνCs, K_cd et ce qui s'en déduit (ħ, R, F, K_J, R_K…) | `constantes` | CODATA 2022, exactes |
+| G, ε₀, μ₀, α, masses, magnétons, Rydberg, Planck… | `constantes` | CODATA 2022 par scipy |
+| minute, heure, degré, litre, hectare, bar, torr, mille marin, nœud… | `constantes` | brochure SI du BIPM |
+| R☉, L☉, S☉, T☉, (GM)☉, (GM)⊕ | `constantes.astro` | UAI 2015, résolution B3 (nominales) |
+| ua, pc, année julienne, année-lumière | `constantes.astro` | UAI 2012 B2, UAI 2015 B2 |
+| M☉, M⊕ | `constantes.astro` | (GM)/G, avec l'incertitude de G |
+| R⊕, aplatissement ; orbite terrestre ; Lune ; H₀ | `constantes.astro` | WGS 84 ; Standish (JPL) ; UAI, NASA ; Planck 2018 |
+| erg, dyne, poise, gauss, œrsted, gal… | `constantes.cgs` | brochure SI du BIPM, tableau 9 |
+| pouce, pied, yard, mile, gallon, livre, once | `constantes.us` | NIST Handbook 44 |
+| masse du W | `constantes` | Particle Data Group 2024 |
 
 Les incertitudes CODATA sont traitées comme indépendantes : scipy ne fournit pas les
 corrélations. Le rapport de deux constantes mesurées a donc une incertitude
 surestimée ; `codata("proton-electron mass ratio")` donne la valeur ajustée.
 
 Noms : ceux de l'ancien `constantes` (`NA`, `H`, `HBAR`, `E`, `C`, `EPS_0`, `M_E`,
-`R_GP`…), sans masquage. Trois noms désignaient deux grandeurs ; ils gardent le sens
-qu'`import constantes` leur donnait, et l'autre sens reçoit un nom :
+`R_GP`…), sauf cinq qu'un physicien lisait de travers, renommés sans alias :
 
-| Nom | Sens | Ancien sens masqué, renommé |
+| Ancien | Nouveau | Ce qu'on lisait |
 | --- | --- | --- |
-| `G_0` | pesanteur normale | quantum de conductance : `G_CONDUCTANCE` |
-| `HA` | énergie de Hartree | hectare : `HECTARE` |
-| `GAL` | gal, unité CGS d'accélération | gallon américain : `GAL_US` |
+| `HA` | `HARTREE` | un hectare (`HECTARE`) |
+| `G_0` | `G_N` | le quantum de conductance (`G_CONDUCTANCE`) |
+| `KN` | `NOEUD` | un kilonewton |
+| `NM` | `MILLE_MARIN` | un nanomètre |
+| `GAL` | `cgs.GAL_CGS` | un gallon (`us.GAL_US`) |
 
-Valeurs corrigées par rapport à l'ancien paquet : pouce (0,0254 m et non 0,254 m,
-et avec lui pied, yard et mile), gallon (en m³), zéro Celsius `T0` (273,15 K et non
-273,16 K), rayon lunaire (1 737,4 km et non 1,737 km), température de Planck (avec
-la masse de Planck), magnéton nucléaire (avec la masse du proton), G (CODATA 2022 au
-lieu de 2014), `K_CD` (683 lm/W ; les 540 THz sont `NU_CD`, et `CD` est l'intensité
-énergétique de 1 cd, 1/683 W/sr), œrsted (en A/m), `mmHG` (millimètre de mercure
-conventionnel ; le torr est `TORR`), valeurs astronomiques datées (UAI 2015). Ajouts :
-`NU_CD`, `TORR`, `STATC`, `GM_sun`, `GM_earth`, `S_sun`, `T_sun`.
-
-Les constantes exactes ont les mêmes flottants qu'avec CODATA 2018 ; les constantes
-mesurées ont leur valeur CODATA 2022. Il faut scipy ≥ 1.15 : avec scipy 1.14 et
-avant (CODATA 2018), `grandeurs.constantes` refuse de se charger plutôt que de donner
-d'autres valeurs.
+Il faut scipy ≥ 1.15 : avec scipy 1.14 et avant (CODATA 2018),
+`grandeurs.constantes` refuse de se charger plutôt que de donner d'autres valeurs.
 
 ### Angles
 

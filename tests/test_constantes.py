@@ -5,6 +5,15 @@ import pytest
 from grandeurs import Grandeur, unit
 from grandeurs import constantes as cst
 
+
+def attribut(nom: str):
+    """``"us.INCH"`` → ``cst.us.INCH`` ; ``"T0"`` → ``cst.T0``."""
+    objet = cst
+    for partie in nom.split("."):
+        objet = getattr(objet, partie)
+    return objet
+
+
 # Valeurs CODATA 2022 (https://physics.nist.gov/cuu/Constants/), recopiées ici
 # pour que le passage de scipy à une autre édition se voie.
 CODATA_2022 = [
@@ -25,14 +34,14 @@ CODATA_2022 = [
     ("A_0", 5.29177210544e-11, 0.00000000082e-11, "m"),
     ("MU_B", 9.2740100657e-24, 0.0000000029e-24, "J/T"),
     ("MU_N", 5.0507837393e-27, 0.0000000016e-27, "J/T"),
-    ("HA", 4.3597447222060e-18, 0.0000000000048e-18, "J"),
+    ("HARTREE", 4.3597447222060e-18, 0.0000000000048e-18, "J"),
     ("L_p", 1.616255e-35, 0.000018e-35, "m"),
     ("M_p", 2.176434e-8, 0.000024e-8, "kg"),
     ("t_p", 5.391247e-44, 0.000060e-44, "s"),
     ("T_p", 1.416784e32, 0.000016e32, "K"),
     ("M_C12", 12.0000000126e-3, 0.0000000037e-3, "kg/mol"),
     ("M_W_S_M_Z", 0.88145, 0.00013, ""),
-    ("G_0", 9.80665, 0, "m.s-2"),
+    ("G_N", 9.80665, 0, "m.s-2"),
     ("ATM", 101325, 0, "Pa"),
 ]
 
@@ -70,20 +79,20 @@ class TestValeursCorrigees:
     @pytest.mark.parametrize(
         ("nom", "valeur", "unite"),
         [
-            ("INCH", 0.0254, "m"),
-            ("FOOT", 0.3048, "m"),
-            ("YARD", 0.9144, "m"),
-            ("MILE", 1609.344, "m"),
-            ("GAL_US", 3.785411784e-3, "m3"),
+            ("us.INCH", 0.0254, "m"),
+            ("us.FOOT", 0.3048, "m"),
+            ("us.YARD", 0.9144, "m"),
+            ("us.MILE", 1609.344, "m"),
+            ("us.GAL_US", 3.785411784e-3, "m3"),
             ("T0", 273.15, "K"),
-            ("R_moon", 1.7374e6, "m"),
+            ("astro.R_moon", 1.7374e6, "m"),
             ("K_CD", 683, "lm/W"),
             ("NU_CD", 540e12, "Hz"),
-            ("OE", 1000 / (4 * math.pi), "A/m"),
+            ("cgs.OE", 1000 / (4 * math.pi), "A/m"),
         ],
     )
     def test_valeur(self, nom, valeur, unite):
-        g = getattr(cst, nom)
+        g = attribut(nom)
         assert g.unite == unit(unite)
         assert g.valeur == pytest.approx(valeur, rel=1e-12)
 
@@ -99,22 +108,44 @@ class TestValeursCorrigees:
         assert (cst.CD * cst.K_CD).vers("cd").valeur == pytest.approx(1)
 
 
-class TestNomsSansMasquage:
-    def test_g0_est_la_pesanteur(self):
-        assert cst.G_0.unite == unit("m.s-2")
-        assert cst.G_CONDUCTANCE.unite == unit("S")
+class TestNoms:
+    @pytest.mark.parametrize(
+        ("nom", "unite"),
+        [
+            ("G_N", "m.s-2"),
+            ("G_CONDUCTANCE", "S"),
+            ("HARTREE", "J"),
+            ("HECTARE", "m2"),
+            ("NOEUD", "m/s"),
+            ("MILLE_MARIN", "m"),
+            ("cgs.GAL_CGS", "m.s-2"),
+            ("us.GAL_US", "m3"),
+        ],
+    )
+    def test_noms_sans_piege(self, nom, unite):
+        assert attribut(nom).unite == unit(unite)
 
-    def test_ha_est_l_energie_de_hartree(self):
-        assert cst.HA.unite == unit("J")
-        assert cst.HECTARE.valeur == 1e4
+    @pytest.mark.parametrize("ancien", ["HA", "GAL", "KN", "NM", "G_0"])
+    def test_anciens_noms_absents_sans_alias(self, ancien):
+        for module in (cst, cst.astro, cst.cgs, cst.us):
+            assert not hasattr(module, ancien)
 
-    def test_gal_est_l_unite_cgs(self):
-        assert cst.GAL.unite == unit("m.s-2")
-        assert cst.GAL_US.unite == unit("m3")
+    @pytest.mark.parametrize("module", [cst, cst.astro, cst.cgs, cst.us])
+    def test_chaque_nom_public_a_une_fiche(self, module):
+        fonctions = {"FICHES", "Fiche", "codata", "cles_codata", "decrire"}
+        for nom in set(module.__all__) - fonctions:
+            assert cst.FICHES[nom].grandeur is getattr(module, nom)
 
-    def test_chaque_nom_public_a_une_fiche(self):
-        constantes = set(cst.__all__) - {"FICHES", "Fiche", "codata", "decrire"}
-        assert constantes == set(cst.FICHES)
+    def test_les_fiches_recensent_les_quatre_modules(self):
+        noms = set()
+        for module in (cst, cst.astro, cst.cgs, cst.us):
+            noms |= set(module.__all__)
+        assert noms - {"FICHES", "Fiche", "codata", "cles_codata", "decrire"} == set(cst.FICHES)
+
+    def test_sous_modules_hors_de_la_tete(self):
+        assert "R_sun" not in cst.__all__
+        assert "ERG" not in cst.__all__
+        assert "INCH" not in cst.__all__
 
     @pytest.mark.parametrize("nom", ["NA", "H", "HBAR", "E", "C", "EPS_0", "M_E", "R_GP"])
     def test_noms_des_corriges_existants(self, nom):
@@ -135,17 +166,17 @@ class TestAstronomie:
         ],
     )
     def test_valeurs_nominales_uai(self, nom, valeur):
-        assert getattr(cst, nom).valeur == valeur
+        assert getattr(cst.astro, nom).valeur == valeur
 
     def test_masses_deduites_de_gm_et_g(self):
-        assert cst.M_sun.valeur == pytest.approx(1.98841e30, rel=1e-5)
-        assert cst.M_earth.valeur == pytest.approx(5.9722e24, rel=1e-4)
-        assert cst.M_moon.valeur == pytest.approx(7.346e22, rel=1e-3)
-        assert cst.M_sun.incertitude > 0
+        assert cst.astro.M_sun.valeur == pytest.approx(1.98841e30, rel=1e-5)
+        assert cst.astro.M_earth.valeur == pytest.approx(5.9722e24, rel=1e-4)
+        assert cst.astro.M_moon.valeur == pytest.approx(7.346e22, rel=1e-3)
+        assert cst.astro.M_sun.incertitude > 0
 
     def test_parsec_et_annee_lumiere(self):
-        assert cst.PC.vers("ly").valeur == pytest.approx(3.26156, rel=1e-5)
-        assert cst.AL.valeur == 9460730472580800
+        assert cst.astro.PC.vers("ly").valeur == pytest.approx(3.26156, rel=1e-5)
+        assert cst.astro.AL.valeur == 9460730472580800
 
 
 def test_charge_de_planck():
@@ -166,13 +197,23 @@ def test_codata_donne_toute_constante_de_scipy():
 def test_toutes_les_cles_de_scipy_lisibles():
     from scipy.constants import physical_constants
 
-    for cle in physical_constants:
+    assert set(cst.cles_codata()) == set(physical_constants)
+    for cle in cst.cles_codata():
         cst.codata(cle)
+
+
+def test_cles_codata_filtrees_par_motif():
+    assert cst.cles_codata("thomson") == ["Thomson cross section"]
+    assert "Rydberg constant" in cst.cles_codata("Rydberg")
 
 
 def test_decrire_cite_la_source():
     assert "CODATA 2022" in cst.decrire("G")
     assert "UAI 2015" in cst.decrire("R_sun")
+    assert (
+        cst.decrire("T0")
+        == "T0 = 273 K : zéro de l'échelle Celsius (définition de l'échelle Celsius)"
+    )
 
 
 def test_incertitudes_independantes_mais_etiquetees():

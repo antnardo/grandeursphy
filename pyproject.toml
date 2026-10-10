@@ -38,9 +38,8 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "N", "C4", "PTH", "RET"]
 ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
-# Noms hérités de l'ancien paquet constantes (mmHG), gardés pour les corrigés.
-"src/grandeurs/constantes.py" = ["N816"]
-"src/grandeurs/flottants.py" = ["N816"]
+# Nom hérité de l'ancien paquet constantes (mmHG), gardé pour les corrigés.
+"src/grandeurs/constantes/__init__.py" = ["N816"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

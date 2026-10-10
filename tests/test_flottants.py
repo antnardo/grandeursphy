@@ -4,16 +4,35 @@ import pytest
 
 from grandeurs import constantes, flottants
 
+MODULES = [
+    (constantes, flottants),
+    (constantes.astro, flottants.astro),
+    (constantes.cgs, flottants.cgs),
+    (constantes.us, flottants.us),
+]
 
-def test_memes_noms_que_les_constantes():
-    assert set(flottants.__all__) == set(constantes.FICHES)
+
+@pytest.mark.parametrize(("grandeurs", "nombres"), MODULES)
+def test_memes_noms_que_les_constantes(grandeurs, nombres):
+    fonctions = {"FICHES", "Fiche", "codata", "cles_codata", "decrire"}
+    assert set(nombres.__all__) == set(grandeurs.__all__) - fonctions
 
 
-@pytest.mark.parametrize("nom", sorted(constantes.FICHES))
-def test_flottant_est_la_valeur_si(nom):
-    valeur = getattr(flottants, nom)
+@pytest.mark.parametrize(
+    ("grandeurs", "nombres", "nom"),
+    [(g, n, nom) for g, n in MODULES for nom in sorted(n.__all__)],
+)
+def test_flottant_est_la_valeur_si(grandeurs, nombres, nom):
+    valeur = getattr(nombres, nom)
     assert type(valeur) is float
-    assert valeur == pytest.approx(float(getattr(constantes, nom).to_base_units().valeur))
+    assert valeur == pytest.approx(float(getattr(grandeurs, nom).to_base_units().valeur))
+
+
+def test_les_quatre_miroirs_couvrent_toutes_les_fiches():
+    noms = set()
+    for _, nombres in MODULES:
+        noms |= set(nombres.__all__)
+    assert noms == set(constantes.FICHES)
 
 
 # Les corrigés existants calculent avec ces flottants : ils doivent être ceux

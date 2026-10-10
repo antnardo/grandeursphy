@@ -14,6 +14,16 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 
 ### Modifié
 
+- `grandeurs.constantes` devient un paquet : le module principal garde les
+  constantes fondamentales et les unités en usage avec le SI ; `constantes.astro`,
+  `constantes.cgs` et `constantes.us` reçoivent l'astronomie, le CGS et les unités
+  anglo-saxonnes. `grandeurs.flottants` a la même structure, générée depuis les
+  grandeurs (un test vérifie que les listes de noms coïncident). Les huit noms des
+  corrigés (`R_GP`, `NA`, `E`, `M_E`, `EPS_0`, `HBAR`, `H`, `C`) sont inchangés.
+- Cinq constantes renommées sans alias : `HA` → `HARTREE`, `G_0` → `G_N`,
+  `KN` → `NOEUD`, `NM` → `MILLE_MARIN`, `GAL` → `cgs.GAL_CGS` (aucun document ne
+  les employait).
+- `cles_codata(motif)` liste les clés que `codata(clé)` accepte.
 - `.si()` consulte une table d'unités préférées (N/m, S/m, C/kg, lm, lx, Bq, V/m,
   A/m, H/m, F/m, Pa·s, W/(m·K), J/(kg·K), J/(mol·K)…) avant le coût minimal, qui
   écrivait T·A pour une raideur, Ω⁻¹·m⁻¹ pour une conductivité, T⁻¹·s⁻¹ pour un

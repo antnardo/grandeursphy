@@ -14,8 +14,7 @@ from grandeurs.notation import traduire_notation
         ("J.mol-1.K-1", "J*mol**(-1)*K**(-1)"),
         ("m2", "m**(2)"),
         ("m/s²", "m/(s**(2))"),
-        ("m^{-1}", "m**(-1)"),
-        ("m^(1/2)", "m**(0.5)"),
+        ("m^0.5", "m**(0.5)"),
         ("kg*m/s**2", "kg*m/(s**(2))"),
         ("1/s", "1/(s)"),
         ("C_90 mol^-1", "C_90*mol**(-1)"),
@@ -57,6 +56,6 @@ def test_nombre_decimal_non_confondu_avec_un_produit():
     assert traduire_notation("1.20e3 m") == "1.20e3*m"
 
 
-@pytest.mark.parametrize("texte", ["[length]", "3 m + 2 cm", "-1 m"])
+@pytest.mark.parametrize("texte", ["[length]", "3 m + 2 cm", "-1 m", "m^{-1}", "m^(1/2)"])
 def test_texte_hors_grammaire_rendu_tel_quel(texte):
     assert traduire_notation(texte) == texte

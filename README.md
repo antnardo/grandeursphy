@@ -95,8 +95,8 @@ g.valeur, g.incertitude, g.incertitude_relative, g.chiffres, g.valeur_si
 
 La traduction des notations est branchée comme préprocesseur du registre : elle
 s'applique à toute chaîne que pint lit, donc aussi à `q.to("km.h-1")`. Sont lus le
-produit par `.`, `·`, `*` ou une espace ; les puissances `^n`, `**n`, `^(n)`, `^{n}`,
-`s⁻¹`, et l'entier collé au nom (`m2`, `s-1`) ; les variantes Unicode (µ/μ, Ω/Ω).
+produit par `.`, `·`, `*` ou une espace ; les puissances `^n`, `^(n)`, `**n`, `s⁻¹`
+et l'entier collé au nom (`m2`, `s-1`) ; les variantes Unicode (µ/μ, Ω/Ω).
 Une juxtaposition ou un point après une barre reste au dénominateur : `J/mol.K` se
 lit J/(mol·K), le seul sens qu'on lui donne en physique, alors que `J/mol*K` garde
 la priorité de Python. Quelques noms français sont ajoutés : `j` (jour), `an`, `tr`

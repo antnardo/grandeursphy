@@ -10,11 +10,10 @@ toute chaîne que pint analyse, donc aussi à ``Quantity(1, "m.s-1")`` et à
 
 Règles :
 
-- produit : ``.``, ``·``, ``⋅``, ``*``, ``×`` ou une simple juxtaposition
-  (``kg m``) ;
-- puissance : ``^n``, ``**n``, ``^(n)``, ``^{n}``, exposants Unicode (``s⁻¹``)
-  ou entier signé collé au nom (``m2``, ``s-1``) ; fractions admises
-  (``m^(1/2)``) ;
+- produit : ``.``, ``·``, ``*`` ou une simple juxtaposition (``kg m``) ;
+- puissance : entier signé collé au nom (``m2``, ``s-1``), ``^n``, ``^(n)``,
+  ``**n``, exposants Unicode (``s⁻¹``) ; ``n`` est un entier ou un décimal
+  (``m^0.5``, racine d'une unité) ;
 - quotient : ``/``. Un produit écrit avec un point ou une juxtaposition après
   une barre reste au dénominateur : ``J/mol.K`` se lit J/(mol·K), comme le lit
   un physicien, alors que ``J/mol*K`` garde la priorité de Python, (J/mol)·K.
@@ -29,7 +28,6 @@ constantes nommées…).
 """
 
 import re
-from fractions import Fraction
 from functools import lru_cache
 
 __all__ = ["traduire_notation"]
@@ -40,9 +38,7 @@ _EQUIVALENTS = str.maketrans(
         "Ω": "Ω",  # signe ohm → oméga
         "Å": "Å",  # signe angström → A rond
         "−": "-",  # signe moins typographique
-        "–": "-",
         "⋅": "·",
-        "•": "·",
     }
 )
 
@@ -54,7 +50,7 @@ _JETONS = re.compile(
     | (?P<nombre>\d+(?:[.,]\d+)?(?:[eE][-+]?\d+)?)
     | (?P<nom>(?:°[^\W\d_⁰¹²³⁴⁵⁶⁷⁸⁹]*|[^\W\d⁰¹²³⁴⁵⁶⁷⁸⁹])(?:_\d+|[^\W\d⁰¹²³⁴⁵⁶⁷⁸⁹])*)
     | (?P<puissance>\*\*|\^)
-    | (?P<etoile>[*×])
+    | (?P<etoile>\*)
     | (?P<point>[.·])
     | (?P<barre>/)
     | (?P<ouvrante>\()
@@ -66,12 +62,7 @@ _JETONS = re.compile(
 )
 
 _ARGUMENT_PUISSANCE = re.compile(
-    r"""\s*(?:
-        \(\s*(?P<p>[-+]?\d+(?:\.\d+)?(?:\s*/\s*\d+)?)\s*\)
-      | \{\s*(?P<a>[-+]?\d+(?:\.\d+)?(?:\s*/\s*\d+)?)\s*\}
-      | (?P<n>[-+]?\d+(?:\.\d+)?)
-    )""",
-    re.VERBOSE,
+    r"\s*(?:\(\s*(?P<p>[-+]?\d+(?:\.\d+)?)\s*\)|(?P<n>[-+]?\d+(?:\.\d+)?))"
 )
 
 
@@ -169,17 +160,16 @@ class _Traducteur:
 
     def _puissance(self, fin: int) -> int:
         argument = _ARGUMENT_PUISSANCE.match(self._texte, fin)
-        if argument is None or not self._apres_operande:
+        if argument is None:
             raise _NotationIllisibleError(self._texte)
-        brut = argument.group("p") or argument.group("a") or argument.group("n")
-        self._exposant(brut)
+        self._exposant(argument.group("p") or argument.group("n"))
         return argument.end()
 
     def _exposant(self, brut: str) -> None:
         if not self._apres_operande:
             raise _NotationIllisibleError(self._texte)
-        valeur = Fraction(brut.replace(" ", ""))
-        texte = str(valeur.numerator) if valeur.denominator == 1 else repr(float(valeur))
+        valeur = float(brut)
+        texte = str(int(valeur)) if valeur.is_integer() else repr(valeur)
         self._sortie.append(f"**({texte})")
 
 
@@ -197,5 +187,5 @@ def traduire_notation(texte: str) -> str:
     normal = texte.translate(_EQUIVALENTS)
     try:
         return _Traducteur(normal).traduire()
-    except (_NotationIllisibleError, ValueError, ZeroDivisionError):
+    except (_NotationIllisibleError, ValueError):
         return texte

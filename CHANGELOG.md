@@ -24,6 +24,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 
 ### Supprimé
 
+- Notation : les exposants entre accolades (`m^{-1}`) et fractionnaires (`m^(1/2)`),
+  et les produits `×` et `•`, que rien n'employait.
 - `Unite` réduite à l'égalité physique (`==`, `equivalentes(a, b)`) et à l'écriture
   (`ecrire`) : `identique`, `dimension`, `affine`, `facteur_si`, `decalage_si`,
   `si()`, `latex()` et l'algèbre des unités (`3 * unit("m")`) disparaissent ; on

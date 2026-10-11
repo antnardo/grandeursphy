@@ -358,16 +358,10 @@ Les incertitudes CODATA sont traitées comme indépendantes : scipy ne fournit p
 corrélations. Le rapport de deux constantes mesurées a donc une incertitude
 surestimée ; `codata("proton-electron mass ratio")` donne la valeur ajustée.
 
-Noms : ceux de l'ancien `constantes` (`NA`, `H`, `HBAR`, `E`, `C`, `EPS_0`, `M_E`,
-`R_GP`…), sauf cinq qu'un physicien lisait de travers, renommés sans alias :
-
-| Ancien | Nouveau | Ce qu'on lisait |
-| --- | --- | --- |
-| `HA` | `HARTREE` | un hectare (`HECTARE`) |
-| `G_0` | `G_N` | le quantum de conductance (`G_CONDUCTANCE`) |
-| `KN` | `NOEUD` | un kilonewton |
-| `NM` | `MILLE_MARIN` | un nanomètre |
-| `GAL` | `cgs.GAL_CGS` | un gallon (`us.GAL_US`) |
+Noms : `NA`, `H`, `HBAR`, `E`, `C`, `EPS_0`, `M_E`, `R_GP`… Les noms qu'un physicien
+lirait de travers sont écrits en toutes lettres : `HARTREE` (et non `HA`, un hectare),
+`G_N` (et non `G_0`, le quantum de conductance), `NOEUD` (et non `KN`, un kilonewton),
+`MILLE_MARIN` (et non `NM`, un nanomètre), `cgs.GAL_CGS` (et non `GAL`, un gallon).
 
 ### Angles
 
@@ -422,8 +416,7 @@ continue (`.github/workflows/ci.yml`) rejoue tout cela à chaque push, sous Pyth
 
 ## Antériorité
 
-L'étude d'antériorité d'octobre 2026 a conclu qu'il ne fallait pas réécrire un
-système d'unités : pint couvre les unités, les préfixes, les unités affines (°C),
+Il ne fallait pas réécrire un système d'unités : pint couvre les unités, les préfixes, les unités affines (°C),
 les conversions et les tableaux numpy ; uncertainties propage les incertitudes au
 premier ordre, corrélations comprises ; scipy fournit CODATA. Ce qui manquait, et
 que ce paquet ajoute : la lecture de `m.s-1` et de `J/mol.K` (pint les refuse, ou
@@ -435,10 +428,6 @@ angles sexagésimaux avec retenue.
 [physpyx](https://physpyx.readthedocs.io/fr/latest/) (GPL) suit un autre flux (un
 script autonome écrit un `.pyx` lu par LaTeX), sans pythontex, sans incertitudes ni
 chiffres significatifs.
-
-Ce paquet remplace les anciens modules `cs`, `units`, `constantes` et `angles` ;
-les corrigés qui faisaient `from constantes import R_GP` font
-`from grandeurs.flottants import R_GP`.
 
 ## Licence
 

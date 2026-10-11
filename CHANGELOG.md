@@ -5,7 +5,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 
 ## 0.2.0 - 2026-10-10
 
-Simplification décidée par l'audit du 10 octobre 2026 : l'API permissive et
+Simplification : l'API permissive et
 l'algèbre des unités disparaissent, l'écriture gagne un réglage `chiffres`, `.si()`
 une table d'unités préférées, les constantes une organisation en sous-modules.
 
@@ -66,9 +66,8 @@ une table d'unités préférées, les constantes une organisation en sous-module
 
 ## 0.1.0 - 2026-10-08
 
-Première version du paquet `grandeurs`, qui fusionne les anciens paquets `cs`,
-`units`, `constantes` et `angles` en une couche au-dessus de pint, uncertainties et
-scipy.constants.
+Première version du paquet `grandeurs` : une couche au-dessus de pint, uncertainties
+et scipy.constants.
 
 ### Ajouté
 
@@ -113,10 +112,6 @@ scipy.constants.
   Planck), magnéton nucléaire (masse du proton), G (CODATA 2022), `K_CD`
   (683 lm/W), œrsted (A/m), valeurs astronomiques (UAI 2015).
 - Écriture des angles : 30° s'écrit 30°00'00" ; −10°30' vaut −10,5°.
-- Arithmétique des incertitudes de l'ancienne classe `CS` (soustraction, division,
-  puissance, opérations avec un flottant, opérateurs en place, comparaisons).
+- Arithmétique des incertitudes (soustraction, division, puissance, opérations avec
+  un flottant, opérateurs en place, comparaisons).
 
-### Supprimé
-
-- Le code d'origine (`ancien/`), qui reste dans l'historique git et dans
-  `_archives/ancien-2026-10-08/`.

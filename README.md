@@ -27,7 +27,7 @@ qty(d)                                 # '\qty{2.4(1)}{m}'  (parenthèses : u)
 unit("N") == unit("kg.m.s^(-2)")       # True
 ```
 
-Le paquet s'installe depuis GitHub (ci-dessous). PyPI : à venir.
+Le paquet s'installe depuis GitHub (ci-dessous).
 
 ## Sommaire
 

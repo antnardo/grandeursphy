@@ -14,10 +14,10 @@ from grandeurs.chiffres import arrondir_valeur
         ("1.2e3 m", 1200, 100, "m"),
         ("1.20(3) m", 1.20, 0.03, "m"),
         ("1.20(3)e3 m", 1200, 30, "m"),
-        ("1.20 ± 0.03 m", 1.20, 0.03, "m"),
-        ("1.20+/-0.03", 1.20, 0.03, ""),
-        ("(1.20 ± 0.03)e3 m", 1200, 30, "m"),
-        ("1.20e3 ± 30 g", 1200, 30, "g"),
+        ("1.20 ± 0.03 m", 1.20, 0.015, "m"),
+        ("1.20+/-0.03", 1.20, 0.015, ""),
+        ("(1.20 ± 0.03)e3 m", 1200, 15, "m"),
+        ("1.20e3 ± 30 g", 1200, 15, "g"),
         ("1,20 m", 1.20, 0.01, "m"),
         ("1.20×10^3 m", 1200, 10, "m"),
         ("1.20 × 10⁻³ m", 1.20e-3, 1e-5, "m"),
@@ -96,7 +96,6 @@ def test_nombre_arrondi_porte_ses_chiffres_significatifs():
 @pytest.mark.parametrize(
     ("options", "attendu"),
     [
-        ({"incertitude": "pm"}, "(1.23 ± 0.01)e3"),
         ({"incertitude": None}, "1.23e3"),
         ({"notation": "fixe"}, "1230(10)"),
         ({"notation": "ingenieur"}, "1.23(1)e3"),
@@ -131,3 +130,80 @@ class TestArrondirValeur:
 
     def test_nombre_numpy_accepte(self):
         assert arrondir_valeur(np.float64(2.0)).ecrire() == "2.00"
+
+
+# Incertitude élargie : « ± » porte k·u, les parenthèses u.
+
+
+def test_ecrire_pm_sur_l_incertitude_elargie():
+    assert arrondir(1234.5, 12, facteur=2).ecrire(incertitude="pm") == "(1.23 ± 0.02)e3"
+    assert arrondir(1234.5, 12, facteur=2).ecrire() == "(1.23 ± 0.02)e3"
+
+
+def test_l_elargissement_peut_changer_le_rang():
+    # u = 0,06 : 1.23(6) en écriture courte, mais 2u = 0,12 → 1.2 ± 0.1
+    assert arrondir_valeur(ufloat(1.234, 0.06)).ecrire() == "1.23(6)"
+    assert arrondir_valeur(ufloat(1.234, 0.06), elargie=True).ecrire() == "1.2 ± 0.1"
+
+
+@pytest.mark.parametrize(
+    ("arrondi", "style"),
+    [
+        (arrondir(1.2, 0.01), "pm"),
+        (arrondir(1.2, 0.01, facteur=2), "courte"),
+    ],
+)
+def test_ecrire_refuse_une_incertitude_au_mauvais_sens(arrondi, style):
+    with pytest.raises(ValueError, match="incertitude"):
+        arrondi.ecrire(incertitude=style)
+
+
+def test_ecrire_valeur_seule_accepte_tout_arrondi():
+    assert arrondir(1.2, 0.01, facteur=2).ecrire(incertitude=None) == "1.20"
+
+
+@pytest.mark.parametrize(
+    ("texte", "incertitude"),
+    [
+        ("1.20(3)", 0.03),
+        ("1.20(3)e3", 30),
+        ("1.20", 0.01),
+        ("1.20 ± 0.03", 0.015),
+        ("1.20 +- 0.03", 0.015),
+    ],
+)
+def test_lecture_parentheses_en_u_et_pm_en_incertitude_elargie(texte, incertitude):
+    lu, _ = lire_nombre(texte)
+    assert lu.std_dev == pytest.approx(incertitude)
+
+
+@pytest.mark.parametrize("u", [0.01, 0.015, 0.02, 0.04, 0.3, 2.5, 30.0, 4e-5])
+@pytest.mark.parametrize("style", ["pm", "courte"])
+def test_aller_retour_ecriture_lecture_rend_le_meme_u(u, style):
+    elargie = style == "pm"
+    texte = arrondir_valeur(ufloat(1.234, u), elargie=elargie).ecrire()
+    lu, _ = lire_nombre(texte)
+    attendu, _ = lire_nombre(arrondir_valeur(lu, elargie=elargie).ecrire())
+    assert lu.std_dev == pytest.approx(attendu.std_dev)
+    # u se retrouve aux arrondis près de l'écriture (un chiffre sur l'incertitude écrite)
+    ecart_ecrit = u * (2 if elargie else 1)
+    assert lu.std_dev * (2 if elargie else 1) == pytest.approx(ecart_ecrit, rel=0.5)
+
+
+@pytest.mark.parametrize("u", [0.01, 0.02, 0.05, 0.5, 3.0])
+def test_aller_retour_exact_quand_l_ecriture_ne_perd_rien(u):
+    texte = arrondir_valeur(ufloat(1.0, u), elargie=True).ecrire()
+    lu, _ = lire_nombre(texte)
+    assert lu.std_dev == pytest.approx(u)
+
+
+@pytest.mark.parametrize("k", [1, 2, 3])
+def test_facteur_d_elargissement_reglable(k):
+    with reglages_temporaires(facteur_elargissement=k):
+        texte = arrondir_valeur(ufloat(1.2, 0.01), elargie=True).ecrire()
+        assert texte == f"1.20 ± 0.0{k}"
+        lu, _ = lire_nombre(texte)
+        assert lu.std_dev == pytest.approx(0.01)
+        # les parenthèses ne dépendent pas du facteur
+        assert arrondir_valeur(ufloat(1.2, 0.01)).ecrire() == "1.20(1)"
+        assert lire_nombre("1.20(1)")[0].std_dev == pytest.approx(0.01)

@@ -106,9 +106,9 @@ class TestEcriture:
     @pytest.mark.parametrize(
         ("g", "attendu"),
         [
-            ("1.20 m.s-1", "(1.20 ± 0.01) m·s⁻¹"),
-            ("1.20e3 kg.m-3", "(1.20 ± 0.01)e3 kg·m⁻³"),
-            ("-0.5 K", "(-0.5 ± 0.1) K"),
+            ("1.20 m.s-1", "(1.20 ± 0.02) m·s⁻¹"),
+            ("1.20e3 kg.m-3", "(1.20 ± 0.02)e3 kg·m⁻³"),
+            ("-0.5 K", "(-0.5 ± 0.2) K"),
         ],
     )
     def test_str_arrondit_d_apres_l_incertitude(self, g, attendu):
@@ -126,9 +126,9 @@ class TestEcriture:
         [
             ({"style": "courte"}, "1.20(1) m"),
             ({"incertitude": False}, "1.20 m"),
-            ({"decimale": ","}, "(1,20 ± 0,01) m"),
+            ({"decimale": ","}, "(1,20 ± 0,02) m"),
             ({"chiffres": 2}, "1.2 m"),
-            ({"notation": "scientifique"}, "(1.20 ± 0.01) m"),
+            ({"notation": "scientifique"}, "(1.20 ± 0.02) m"),
         ],
     )
     def test_texte_selon_les_options(self, options, attendu):
@@ -144,7 +144,7 @@ class TestEcriture:
 
     def test_tableau_incertain_arrondi_d_apres_les_incertitudes(self):
         g = grandeur([1.0, 2.0], "m", incertitude=[0.1, 0.02])
-        assert str(g) == "[1.0 ± 0.1; 2.00 ± 0.02] m"
+        assert str(g) == "[1.0 ± 0.2; 2.00 ± 0.04] m"
         assert g.texte(style="courte") == "[1.0(1); 2.00(2)] m"
 
     def test_valeur_exacte_au_reglage_chiffres(self):
@@ -154,9 +154,39 @@ class TestEcriture:
             assert str(g) == "9.7983 m·s⁻²"
         assert g.texte(chiffres=2) == "9.8 m·s⁻²"
 
+    def test_pm_ecrit_l_incertitude_elargie_et_courte_l_incertitude_type(self):
+        g = grandeur(1.2, "m", incertitude=0.01)
+        assert g.incertitude == 0.01
+        assert g.texte(style="pm") == "(1.20 ± 0.02) m"
+        assert g.texte(style="courte") == "1.20(1) m"
+
+    @pytest.mark.parametrize(
+        "texte", ["1.20 m", "(1.20 ± 0.02) m", "1.20(1) m", "(5.0 ± 0.4)e3 Pa", "-0.5 K"]
+    )
+    @pytest.mark.parametrize("style", ["pm", "courte"])
+    def test_aller_retour_str_grandeur(self, texte, style):
+        g = grandeur(texte)
+        relu = grandeur(g.texte(style=style))
+        assert relu.valeur == pytest.approx(g.valeur)
+        assert relu.incertitude == pytest.approx(g.incertitude)
+        assert relu.texte(style=style) == g.texte(style=style)
+
+    def test_facteur_d_elargissement_reglable(self):
+        g = grandeur("1.20 m")
+        with reglages_temporaires(facteur_elargissement=3):
+            assert str(g) == "(1.20 ± 0.03) m"
+            assert grandeur("1.20 ± 0.03 m").incertitude == pytest.approx(0.01)
+            assert g.texte(style="courte") == "1.20(1) m"
+        assert grandeur("1.20 ± 0.03 m").incertitude == pytest.approx(0.015)
+
+    def test_arrondi_elargi(self):
+        g = grandeur(1.234, "m", incertitude=0.06)
+        assert g.arrondi().ecrire() == "1.23(6)"
+        assert g.arrondi(elargie=True).ecrire() == "1.2 ± 0.1"
+
     def test_valeur_incertaine_ignore_le_reglage_chiffres(self):
         with reglages_temporaires(chiffres=5):
-            assert str(grandeur("1.20 m")) == "(1.20 ± 0.01) m"
+            assert str(grandeur("1.20 m")) == "(1.20 ± 0.02) m"
 
     def test_format_applique_a_la_valeur(self):
         assert f"{grandeur(1.23456, 'm'):.2f}" == "1.23 m"

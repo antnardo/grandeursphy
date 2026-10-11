@@ -5,8 +5,10 @@ la commande siunitx depuis Python, ce que font ces fonctions.
 
 - :func:`qty` écrit ``\qty{1.20(1)}{m.s^{-1}}`` (``\SI`` sur demande, pour
   siunitx 2) ; :func:`num` écrit ``\num{1.20(1)}`` ;
-- l'incertitude est en notation courte, « 1.20(1) » : siunitx la lit et
-  l'affiche comme le demande son option ``uncertainty-mode`` ;
+- l'incertitude est en notation courte, « 1.20(1) », qui porte
+  l'incertitude-type u : siunitx la lit et l'affiche comme le demande son
+  option ``uncertainty-mode`` (attention : ``uncertainty-mode=separate`` affiche
+  alors « 1.20 ± 0.01 », c'est-à-dire u et non l'incertitude élargie) ;
 - la valeur est arrondie au rang de l'incertitude (voir
   :mod:`grandeurs.chiffres`), ou à ``chiffres`` chiffres significatifs (le
   réglage ``chiffres``, 3 par défaut, pour une valeur exacte) ;
@@ -144,11 +146,12 @@ def lire_qty(texte: str) -> Grandeur:
     r"""Lit ``\qty{1.20(1)}{m.s^{-1}}``, ``\SI{…}{…}`` ou ``\num{…}`` ; l'inverse de :func:`qty`.
 
     Le nombre est lu comme par :func:`grandeurs.grandeur` (incertitude courte,
-    virgule, exposant ``e3``), l'unité littérale de siunitx est retraduite
-    (``^{-1}``, ``\micro``, ``\ohm``, ``\degreeCelsius``…).
+    qui est l'incertitude-type, virgule, exposant ``e3``) ; un « +- » s'y lit
+    comme partout, en incertitude élargie. L'unité littérale de siunitx est
+    retraduite (``^{-1}``, ``\micro``, ``\ohm``, ``\degreeCelsius``…).
 
     >>> print(lire_qty(r"\qty{1,20(1)e3}{kg.m^{-3}}"))
-    (1.20 ± 0.01)e3 kg·m⁻³
+    (1.20 ± 0.02)e3 kg·m⁻³
     """
     lu = _COMMANDE.fullmatch(texte.strip())
     if lu is None or (lu.group("macro") == "num") == (lu.group("unite") is not None):

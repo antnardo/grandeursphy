@@ -28,6 +28,10 @@ def test_reglages_par_defaut():
         {"chiffres": 0},
         {"notation": "sci"},
         {"style_incertitude": "long"},
+        {"facteur_elargissement": 0},
+        {"facteur_elargissement": -2},
+        {"facteur_elargissement": float("inf")},
+        {"facteur_elargissement": "2"},
     ],
 )
 def test_valeur_invalide_refusee(champs):
@@ -79,3 +83,7 @@ def test_avertissement_designe_la_ligne_de_l_utilisateur():
 def test_signaler_erreur_leve_sans_unite_error():
     with pytest.raises(SansUniteError, match="oubli"):
         signaler("erreur", "oubli")
+
+
+def test_facteur_d_elargissement_par_defaut():
+    assert Reglages().facteur_elargissement == 2

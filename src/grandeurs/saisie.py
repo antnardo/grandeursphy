@@ -61,10 +61,13 @@ def grandeur(valeur: Any, unite: Any = None, incertitude: Any = None) -> Grandeu
     - ``grandeur("1.20 m.s-1")`` : chaîne avec unité ; « 1.20 » a trois
       chiffres significatifs, donc une incertitude de 0,01 (voir
       :mod:`grandeurs.chiffres` pour les écritures lues : « 1.20(3) »,
-      « 1.20 ± 0.03 », « 1,20 », « 1.20×10^3 »…) ;
+      « 1.20 ± 0.03 », « 1,20 », « 1.20×10^3 »…) ; derrière « ± » se lit
+      l'incertitude élargie (u = 0,015 pour « ± 0.03 » avec k = 2), entre
+      parenthèses l'incertitude-type ;
     - ``grandeur(1.2, "m/s")``, ``grandeur(np.array([1, 2]), "m")`` : nombre ou
       tableau, exact sauf ``incertitude`` ;
-    - ``grandeur(1.2, "m", incertitude=0.05)`` ou ``incertitude="5 cm"`` ;
+    - ``grandeur(1.2, "m", incertitude=0.05)`` ou ``incertitude="5 cm"`` :
+      l'incertitude-type u ;
     - ``grandeur(q, "km")`` : conversion d'une grandeur ou d'une chaîne qui a
       déjà une unité.
 

@@ -3,6 +3,43 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 [SemVer](https://semver.org/lang/fr/).
 
+## Non publié
+
+Décision du 11 octobre 2026 : une écriture « x ± a » signifie désormais
+l'incertitude élargie a = k·u, avec k = 2 par défaut. Le paquet calcule toujours
+avec l'incertitude-type u (`std_dev`) ; seul ce qui s'écrit ou se lit derrière un
+« ± » change.
+
+### Ajouté
+
+- Réglage `facteur_elargissement` (2 par défaut, nombre fini > 0) : le facteur k
+  de l'incertitude élargie.
+- `arrondir(..., facteur=k)`, `arrondir_valeur(..., elargie=True)` et
+  `Grandeur.arrondi(elargie=True)` arrondissent sur l'incertitude élargie ;
+  `NombreArrondi` porte un champ `facteur` (`None` pour l'incertitude-type).
+
+### Modifié (incompatible)
+
+- Écriture « ± » (`str`, `texte(style="pm")`) : l'incertitude écrite est k·u,
+  arrondie sur k·u, et la valeur à son rang : `grandeur("1.20 m")` s'écrit
+  `(1.20 ± 0.02) m` (u = 0,01) au lieu de `(1.20 ± 0.01) m`. Le rang peut changer
+  par rapport à l'écriture courte : u = 0,06 donne `1.23(6)` mais `1.2 ± 0.1`.
+- Lecture « ± » (`grandeur`, `lire_nombre`, `lire_qty`) : « 1.20 ± 0.03 »,
+  « 1.20+/-0.03 », « (1.20 ± 0.03)e3 », « 1.20e3 ± 30 » donnent u = a/k (0,015,
+  15), pour que l'écriture se relise.
+- `NombreArrondi.ecrire` choisit par défaut (`incertitude="auto"`) la forme qui
+  convient à l'arrondi, et refuse d'écrire entre parenthèses une incertitude
+  élargie, ou derrière « ± » une incertitude-type (`ValueError`).
+
+### Inchangé
+
+- La notation courte « 1.20(1) » et toute la sortie siunitx (`qty`, `num`, qui
+  n'écrivent que la forme courte) restent en u ; « 1.20(3) » et `\qty{1.20(3)}{m}`
+  se lisent toujours u = 0,03. Les chiffres significatifs (« 1.20 » → u = 0,01),
+  l'argument `incertitude=` de `grandeur` et les constantes (u de CODATA, créées
+  par `ufloat` et non lues dans un texte) ne changent pas ; seul leur affichage
+  « ± » montre 2u.
+
 ## 0.2.0 - 2026-10-10
 
 Simplification : l'API permissive et

@@ -18,12 +18,12 @@ from grandeurs import constantes as cst
 
 v = grandeur("1.20 m.s-1")             # « 1.20 » : trois chiffres significatifs
 d = v * grandeur("2.0 s")
-print(d)                               # (2.4 ± 0.1) m
-print(v.vers("km/h"))                  # (4.32 ± 0.04) km·h⁻¹
+print(d)                               # (2.4 ± 0.2) m  (± : 2u)
+print(v.vers("km/h"))                  # (4.32 ± 0.07) km·h⁻¹
 F = grandeur("2.0 kg") * grandeur("9.81 m.s-2")
-print(F.si())                          # (20 ± 1) N
+print(F.si())                          # (20 ± 2) N
 print((cst.R_GP * grandeur(20, "°C")).si())   # 2.44e3 J·mol⁻¹
-qty(d)                                 # '\qty{2.4(1)}{m}'
+qty(d)                                 # '\qty{2.4(1)}{m}'  (parenthèses : u)
 unit("N") == unit("kg.m.s^(-2)")       # True
 ```
 
@@ -51,7 +51,9 @@ Le paquet s'installe depuis GitHub (ci-dessous). PyPI : à venir.
 - **Les chiffres significatifs d'après l'écriture.** Une chaîne porte sa précision :
   « 1.20 » a trois chiffres significatifs, donc une incertitude-type de 0,01 ;
   uncertainties la propage, corrélations comprises, et l'affichage arrondit la
-  valeur au rang de l'incertitude : `(2.4 ± 0.1) m`. Une valeur exacte s'écrit à
+  valeur au rang de l'incertitude : `(2.4 ± 0.2) m`. Derrière « ± » s'écrit
+  l'incertitude **élargie** 2u (facteur d'élargissement réglable), entre
+  parenthèses l'incertitude-type u : `2.4(1) m`. Une valeur exacte s'écrit à
   `chiffres` chiffres significatifs (3 par défaut, réglable) : fini les
   `9.79828445167129`.
 - **La simplification en SI** avec les unités dérivées, par une table de ce qu'un
@@ -110,7 +112,7 @@ siunitx 2.
 ## Prise en main
 
 Deux règles valent partout. **Une chaîne est une mesure, un nombre est exact** :
-`grandeur("50 Hz")` vaut (50 ± 1) Hz, `grandeur(50, "Hz")` vaut 50,0 Hz tout rond.
+`grandeur("50 Hz")` vaut (50 ± 2) Hz (u = 1 Hz), `grandeur(50, "Hz")` vaut 50,0 Hz tout rond.
 **Un `float` pour un scalaire, un tableau numpy pour un tableau** : `g.valeur` et
 `g.incertitude` sont des `float` (des tableaux pour un tableau), `g.unite` une
 `Unite`.
@@ -124,8 +126,10 @@ from grandeurs.fonctions import sqrt, sin
 # Créer
 g = grandeur("1.20 m.s-1")            # incertitude d'après l'écriture : 0,01
 g = grandeur(1.2, "m/s")              # exacte
-g = grandeur(1.2, "m", incertitude=0.05)
+g = grandeur(1.2, "m", incertitude=0.05)       # incertitude-type u
 g = grandeur(1.2, "m", incertitude="5 cm")
+g = grandeur("1.20 ± 0.02 m")         # « ± » : incertitude élargie, u = 0,01
+g = grandeur("1.20(1) m")             # parenthèses : u = 0,01
 g = grandeur([1.0, 2.0], "m", incertitude=[0.1, 0.02])
 g = grandeur("1.20 km", "m")          # lue puis convertie
 g.valeur, g.incertitude, g.unite, g.chiffres, g.valeur_si
@@ -133,8 +137,8 @@ g.valeur, g.incertitude, g.unite, g.chiffres, g.valeur_si
 # Calculer : pint convertit, uncertainties propage, les fonctions usuelles aussi
 h = grandeur(20, "cm")
 v = sqrt(2 * cst.G_N * h).si()         # 1.98 m·s⁻¹
-s = sin(grandeur("30.0 °"))           # 0.500 ± 0.002
-print(grandeur("1.20 m") + grandeur("3.0 cm"))   # (1.23 ± 0.01) m
+s = sin(grandeur("30.0 °"))           # 0.500 ± 0.003
+print(grandeur("1.20 m") + grandeur("3.0 cm"))   # (1.23 ± 0.02) m
 
 # Écrire
 print(grandeur(36, "km/h").vers("m.s-1"))        # 10.0 m·s⁻¹
@@ -166,11 +170,20 @@ $v = \py{qty(v)}$, $\varepsilon_0 = \py{qty(cst.EPS_0)}$, $\alpha = \py{num(cst.
 
 ## Pièges
 
-**Une chaîne est une valeur incertaine.** `grandeur("50 Hz")` vaut (50 ± 1) Hz,
-parce que « 50 » a deux chiffres significatifs ; une donnée d'énoncé qu'on veut
-exacte se passe en nombre, `grandeur(50, "Hz")`, ou avec le réglage
-`chiffres_significatifs=False`. L'affichage le montre : `(50 ± 1) Hz` contre
+**Une chaîne est une valeur incertaine.** `grandeur("50 Hz")` vaut 50 Hz à
+u = 1 Hz près, parce que « 50 » a deux chiffres significatifs ; une donnée d'énoncé
+qu'on veut exacte se passe en nombre, `grandeur(50, "Hz")`, ou avec le réglage
+`chiffres_significatifs=False`. L'affichage le montre : `(50 ± 2) Hz` contre
 `50.0 Hz`.
+
+**« ± » est l'incertitude élargie, les parenthèses l'incertitude-type.** Le paquet
+calcule avec u (`g.incertitude`, le `std_dev` d'uncertainties) ; ce qui s'écrit ou
+se lit derrière « ± » vaut k·u, k = 2 par défaut (réglage `facteur_elargissement`).
+`grandeur(1.2, "m", incertitude=0.01)` s'écrit `(1.20 ± 0.02) m` ou `1.20(1) m`,
+et `grandeur("1.20 ± 0.02 m")` se relit u = 0,01. Les deux écritures n'ont pas
+toujours le même rang : u = 0,06 m donne `1.23(6) m` mais `(1.2 ± 0.1) m`.
+L'argument `incertitude=` est u, et `qty` écrit toujours la forme courte, donc u :
+avec l'option `uncertainty-mode=separate` de siunitx, celle-ci s'affiche « ± u ».
 
 **Une valeur exacte s'écrit à `chiffres` chiffres significatifs, trois par
 défaut** : `grandeur(2, "m")` s'affiche `2.00 m` et `qty(grandeur(20, "°C"))` donne
@@ -289,7 +302,8 @@ Les réglages sont un objet figé (`Reglages`) qu'on change par
 | `chiffres_significatifs` | `True` | « 1.20 » porte une incertitude de 0,01 ; sinon il est exact |
 | `chiffres_incertitude` | `1` | chiffres significatifs gardés sur l'incertitude à l'affichage |
 | `afficher_incertitude` | `True` | sinon, valeur seule, arrondie à ses chiffres significatifs |
-| `style_incertitude` | `"pm"` | à l'écran : `(1.20 ± 0.01) m` ou `"courte"` : `1.20(1) m` |
+| `style_incertitude` | `"pm"` | à l'écran : `(1.20 ± 0.02) m` (incertitude élargie) ou `"courte"` : `1.20(1) m` (incertitude-type) |
+| `facteur_elargissement` | `2` | k : « ± » écrit et lit k·u ; les parenthèses restent en u |
 | `decimale` | `"."` | `","` pour la virgule française |
 | `notation` | `"auto"` | `"fixe"`, `"scientifique"`, `"ingenieur"` |
 | `sans_unite` | `"avertissement"` | grandeur créée sans unité : `"silence"`, `"avertissement"` ou `"erreur"` |
@@ -302,16 +316,18 @@ tout avertissement ; l'erreur est une `SansUniteError`.
 Une chaîne porte sa précision, selon la convention de `ufloat_fromstr`, qui est
 aussi celle de l'enseignement : l'incertitude-type vaut une unité du dernier chiffre
 écrit, et les zéros de droite comptent (« 1200 » a quatre chiffres significatifs,
-« 1.2e3 » deux). Sont lus « 1.20(3) », « 1.20 ± 0.03 », « (1.20 ± 0.03)e3 »,
+« 1.2e3 » deux). Sont lus « 1.20(3) » (u = 0,03), « 1.20 ± 0.03 » et
+« (1.20 ± 0.03)e3 » (incertitude élargie : u = 0,015, et 15 pour le second),
 « 1,20 », « 1.20×10^3 » et « 1.20×10⁻³ ». Un nombre Python est exact.
 
 La propagation est celle d'uncertainties, au premier ordre, corrélations comprises :
-`a - a` vaut exactement 0. À l'affichage, l'incertitude est arrondie à
-`chiffres_incertitude` chiffres et la valeur au même rang : c'est l'incertitude qui
+`a - a` vaut exactement 0. À l'affichage, l'incertitude écrite (k·u derrière « ± », u
+entre parenthèses) est arrondie à `chiffres_incertitude` chiffres et la valeur au
+même rang : c'est l'incertitude qui
 fixe les chiffres significatifs. Une valeur exacte est arrondie au réglage
 `chiffres`. L'arrondi se fait en décimal, au plus proche, demi vers le haut (2,675
 donne 2,68, là où `round(2.675, 2)` donne 2,67). Un tableau s'écrit élément par
-élément avec la même règle : `[1.0 ± 0.1; 2.00 ± 0.02] m`. L'égalité `==` de deux
+élément avec la même règle : `[1.0 ± 0.2; 2.00 ± 0.04] m`. L'égalité `==` de deux
 mesures indépendantes de même valeur est fausse : pour uncertainties, deux variables
 aléatoires ne sont égales que si leur différence est exactement nulle.
 

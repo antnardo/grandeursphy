@@ -14,7 +14,9 @@ Ce qui est ajouté :
   propage les incertitudes au premier ordre, corrélations comprises
   (``a - a`` vaut exactement 0) ;
 - l'écriture : valeur arrondie d'après l'incertitude, unités à la française
-  (:meth:`texte`, ``str``), sortie siunitx (:meth:`latex`) ;
+  (:meth:`texte`, ``str``), sortie siunitx (:meth:`latex`) ; derrière « ± »
+  s'écrit l'incertitude élargie (2u par défaut), entre parenthèses
+  l'incertitude-type u ;
 - la simplification en SI avec unités dérivées (:meth:`si`) et la conversion
   dans une unité écrite comme dans un manuel (:meth:`vers`) ;
 - les opérations qu'``uncertainties`` déprécie sur ses nombres : les
@@ -138,14 +140,16 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
 
     # Écriture
 
-    def arrondi(self, chiffres: int | None = None) -> NombreArrondi:
+    def arrondi(self, chiffres: int | None = None, *, elargie: bool = False) -> NombreArrondi:
         """Valeur arrondie d'après l'incertitude, ou à ``chiffres`` significatifs.
 
+        L'arrondi porte sur l'incertitude-type (écriture courte, ``1.20(1)``), ou
+        sur l'incertitude élargie si ``elargie`` (écriture « ± », ``1.20 ± 0.02``).
         Une valeur exacte est arrondie au réglage ``chiffres`` (3 par défaut).
         """
         if np.ndim(self.magnitude):
             raise TypeError("l'arrondi ne s'applique qu'à une grandeur scalaire")
-        return arrondir_valeur(self.magnitude, chiffres)
+        return arrondir_valeur(self.magnitude, chiffres, elargie=elargie)
 
     def texte(
         self,
@@ -156,8 +160,11 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
         notation: Notation | None = None,
         style: StyleIncertitude | None = None,
     ) -> str:
-        """Écrit la grandeur : ``(1.20 ± 0.01) m·s⁻¹``, ``1.20 m·s⁻¹``, ``[1.00; 2.00] m``…
+        """Écrit la grandeur : ``(1.20 ± 0.02) m·s⁻¹``, ``1.20 m·s⁻¹``, ``[1.00; 2.00] m``…
 
+        Le style ``"pm"`` écrit l'incertitude élargie ``k·u`` (``k`` : réglage
+        ``facteur_elargissement``, 2 par défaut), le style ``"courte"``
+        l'incertitude-type ``u`` : ``1.20(1) m``.
         Les options valent par défaut les réglages (:func:`grandeurs.reglages`).
         ``chiffres`` impose un nombre de chiffres significatifs et masque alors
         l'incertitude. Un tableau est écrit élément par élément, avec la même
@@ -171,7 +178,7 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
         forme = (style or r.style_incertitude) if montrer else None
 
         def ecrire(m: Any) -> str:
-            return arrondir_valeur(m, chiffres).ecrire(
+            return arrondir_valeur(m, chiffres, elargie=forme == "pm").ecrire(
                 notation=notation or r.notation, decimale=decimale or r.decimale, incertitude=forme
             )
 

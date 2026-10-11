@@ -100,14 +100,14 @@ def test_methode_latex_de_la_grandeur():
 @pytest.mark.parametrize(
     ("texte", "attendu"),
     [
-        (r"\qty{1.20(1)}{m.s^{-1}}", "(1.20 ± 0.01) m·s⁻¹"),
-        (r"\qty{1,20(1)e3}{kg.m^{-3}}", "(1.20 ± 0.01)e3 kg·m⁻³"),
-        (r"\qty{5(1)}{\micro\ohm}", "(5 ± 1) µΩ"),
-        (r"\qty{20.0}{\degreeCelsius}", "(20.0 ± 0.1) °C"),
-        (r"\qty[per-mode=symbol]{3}{\micro m}", "(3 ± 1) µm"),
-        (r"\SI{2}{k\ohm}", "(2 ± 1) kΩ"),
-        (r"\qty{1}{J.mol^{-1}.K^{-1}}", "(1 ± 1) J·mol⁻¹·K⁻¹"),
-        (r"\num{0.50}", "0.50 ± 0.01"),
+        (r"\qty{1.20(1)}{m.s^{-1}}", "(1.20 ± 0.02) m·s⁻¹"),
+        (r"\qty{1,20(1)e3}{kg.m^{-3}}", "(1.20 ± 0.02)e3 kg·m⁻³"),
+        (r"\qty{5(1)}{\micro\ohm}", "(5 ± 2) µΩ"),
+        (r"\qty{20.0}{\degreeCelsius}", "(20.0 ± 0.2) °C"),
+        (r"\qty[per-mode=symbol]{3}{\micro m}", "(3 ± 2) µm"),
+        (r"\SI{2}{k\ohm}", "(2 ± 2) kΩ"),
+        (r"\qty{1}{J.mol^{-1}.K^{-1}}", "(1 ± 2) J·mol⁻¹·K⁻¹"),
+        (r"\num{0.50}", "0.50 ± 0.02"),
     ],
 )
 def test_lire_qty(texte, attendu):
@@ -135,3 +135,21 @@ def test_lire_qty_inverse_de_qty(g):
     relu = lire_qty(qty(g))
     assert relu.unite == g.unite
     assert relu.valeur == pytest.approx(g.valeur, rel=1e-9)
+
+
+def test_qty_garde_l_incertitude_type_quel_que_soit_le_facteur():
+    g = grandeur("1.20 m")
+    assert qty(g) == r"\qty{1.20(1)}{m}"
+    with reglages_temporaires(facteur_elargissement=3):
+        assert qty(g) == r"\qty{1.20(1)}{m}"
+
+
+def test_lire_qty_parentheses_en_u_et_pm_en_incertitude_elargie():
+    assert lire_qty(r"\qty{1.20(3)}{m}").incertitude == pytest.approx(0.03)
+    assert lire_qty(r"\qty{1.20 +- 0.03}{m}").incertitude == pytest.approx(0.015)
+
+
+def test_aller_retour_qty_lire_qty():
+    g = grandeur(1.234, "m", incertitude=0.06)
+    relu = lire_qty(qty(g))
+    assert relu.incertitude == pytest.approx(0.06)

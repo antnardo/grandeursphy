@@ -66,8 +66,14 @@ class Reglages:
       l'incertitude à l'affichage (la valeur est arrondie au même rang) ;
     - ``afficher_incertitude`` : afficher l'incertitude, ou seulement la valeur
       arrondie à ses chiffres significatifs ;
-    - ``style_incertitude`` : à l'écran, ``"pm"`` donne ``(1.20 ± 0.01) m`` et
-      ``"courte"`` donne ``1.20(1) m`` (la sortie LaTeX est toujours courte) ;
+    - ``style_incertitude`` : à l'écran, ``"pm"`` donne ``(1.20 ± 0.02) m``,
+      l'incertitude élargie, et ``"courte"`` donne ``1.20(1) m``, l'incertitude-type
+      (la sortie LaTeX est toujours courte) ;
+    - ``facteur_elargissement`` : facteur ``k`` de l'incertitude élargie, 2 par
+      défaut. Le paquet calcule avec l'incertitude-type ``u`` ; tout ce qui
+      s'écrit ou se lit derrière un « ± » est l'incertitude élargie ``k·u`` :
+      ``(1.20 ± 0.02) m`` s'écrit pour ``u = 0,01 m``, et « 1.20 ± 0.02 » se lit
+      ``u = 0,01``. La notation parenthésée « 1.20(1) » reste en ``u`` ;
     - ``decimale`` : séparateur décimal, ``"."`` ou ``","`` ;
     - ``notation`` : ``"auto"``, ``"fixe"``, ``"scientifique"`` ou ``"ingenieur"``.
     """
@@ -78,6 +84,7 @@ class Reglages:
     chiffres_incertitude: int = 1
     afficher_incertitude: bool = True
     style_incertitude: StyleIncertitude = "pm"
+    facteur_elargissement: float = 2.0
     decimale: str = "."
     notation: Notation = "auto"
 
@@ -90,6 +97,9 @@ class Reglages:
             valeur = getattr(self, nom)
             if not isinstance(valeur, int) or valeur < 1:
                 raise ValueError(f"{nom} doit être un entier ≥ 1")
+        k = self.facteur_elargissement
+        if isinstance(k, bool) or not isinstance(k, int | float) or not k > 0 or k == float("inf"):
+            raise ValueError("facteur_elargissement doit être un nombre fini > 0")
 
     @staticmethod
     def _verifier(nom: str, valeur: object, permis: tuple[object, ...]) -> None:

@@ -74,8 +74,14 @@ def _noter(nom: str, valeur: Grandeur, description: str, source: str) -> Grandeu
 def codata(cle: str) -> Grandeur:
     """Constante CODATA de scipy, sous la clé anglaise de scipy, en grandeur.
 
-    >>> print(codata("proton-electron mass ratio"))
-    1836.15267343 ± 0.00000003
+    L'incertitude stockée est l'incertitude-type de CODATA ; l'écriture « ± »
+    montre l'incertitude élargie (2u par défaut), l'écriture courte u.
+
+    >>> mu = codata("proton-electron mass ratio")
+    >>> print(mu)
+    1836.15267343 ± 0.00000006
+    >>> mu.texte(style="courte")
+    '1836.15267343(3)'
     """
     valeur, unite, incertitude = physical_constants[cle]
     magnitude = ufloat(valeur, incertitude, tag=cle) if incertitude else valeur

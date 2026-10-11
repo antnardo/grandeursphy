@@ -3,18 +3,29 @@
 Lecture. Un nombre écrit porte sa précision : « 1.20 » a trois chiffres
 significatifs. On suit la convention de ``uncertainties.ufloat_fromstr``, qui est
 aussi celle de l'enseignement français : l'incertitude-type vaut une unité du
-dernier chiffre écrit (« 1.20 » donne 1,20 ± 0,01), et les zéros de droite
+dernier chiffre écrit (« 1.20 » donne u = 0,01), et les zéros de droite
 comptent (« 1200 » a quatre chiffres significatifs ; on écrit « 1.2e3 » pour en
 avoir deux). L'ancienne classe ``CS`` ne comptait pas les zéros de droite d'un
 entier ; on y renonce, car cette règle n'est ni celle des programmes ni celle
 d'``uncertainties``. Sont aussi lues les écritures « 1.20(3) », « 1.20 ± 0.03 »,
 « (1.20 ± 0.03)e3 », « 1,20 », « 1.20×10^3 » et « 1.20×10⁻³ ».
 
-Arrondi. L'incertitude est arrondie à ``chiffres_incertitude`` chiffres
-significatifs (un par défaut), et la valeur au même rang : c'est l'incertitude
-qui fixe les chiffres significatifs de la valeur. Sans incertitude, la valeur
-est exacte : :func:`arrondir_valeur`, le point d'arrondi de toutes les
-écritures du paquet, l'écrit à ``reglages().chiffres`` chiffres significatifs
+Incertitude-type et incertitude élargie. Le paquet calcule avec l'incertitude-type
+``u`` (le ``std_dev`` d'``uncertainties``). Ce qui s'écrit derrière un « ± » est
+l'incertitude élargie ``k·u``, ``k`` valant le réglage ``facteur_elargissement``
+(2 par défaut) : u = 0,01 s'écrit « 1.20 ± 0.02 », et « 1.20 ± 0.03 » se lit
+u = 0,015, pour que l'écriture se relise. La notation parenthésée « 1.20(1) »,
+celle de la métrologie et de siunitx, porte l'incertitude-type : « 1.20(3) » se
+lit u = 0,03 et u = 0,01 s'écrit « 1.20(1) ».
+
+Arrondi. L'incertitude écrite (``u`` entre parenthèses, ``k·u`` derrière « ± »)
+est arrondie à ``chiffres_incertitude`` chiffres significatifs (un par défaut),
+et la valeur au même rang : c'est l'incertitude qui fixe les chiffres
+significatifs de la valeur. Les deux écritures d'un même nombre n'ont donc pas
+toujours le même rang : u = 0,06 s'écrit « 1.23(6) » mais « 1.2 ± 0.1 ».
+Sans incertitude, la valeur est exacte : :func:`arrondir_valeur`, le point
+d'arrondi de toutes les écritures du paquet, l'écrit à ``reglages().chiffres``
+chiffres significatifs
 (3 par défaut) ; :func:`arrondir`, la fonction de base, l'écrit en entier, à 15
 chiffres significatifs au plus (au-delà, un flottant ne porte que le bruit des
 conversions). L'arrondi se fait en décimal, sur l'écriture la plus courte du
@@ -25,9 +36,9 @@ donne 2,67 à cause de l'écriture binaire.
 
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import ROUND_HALF_UP, Context, Decimal, localcontext
-from typing import Any, TypeAlias
+from typing import Any, Literal, TypeAlias
 
 from uncertainties import UFloat, ufloat, ufloat_fromstr
 
@@ -87,8 +98,16 @@ def lire_nombre(texte: str, *, chiffres_significatifs: bool = True) -> tuple[Val
     ``chiffres_significatifs``, sinon seulement avec une incertitude explicite),
     un ``float`` sinon. Le reste est en général l'unité.
 
+    L'incertitude écrite derrière « ± » est l'incertitude élargie : elle est
+    divisée par le réglage ``facteur_elargissement`` (2 par défaut) pour donner
+    l'incertitude-type. Celle des parenthèses est l'incertitude-type.
+
     >>> lire_nombre("1.20 m.s-1")
     (1.2+/-0.01, 'm.s-1')
+    >>> lire_nombre("1.20 ± 0.02 m")
+    (1.2+/-0.01, 'm')
+    >>> lire_nombre("1.20(1) m")
+    (1.2+/-0.01, 'm')
     """
     for forme in _FORMES:
         lu = forme.match(texte)
@@ -103,9 +122,11 @@ def lire_nombre(texte: str, *, chiffres_significatifs: bool = True) -> tuple[Val
         if champs.get("u") is not None:
             incertitude = _decimal(champs["u"])
             if "eu" in champs:  # 1.20e3 ± 0.03e3 : chaque nombre porte son exposant
-                ecart = float(incertitude + _exposant(champs.get("eu")))
-                return ufloat(float(valeur + exposant), ecart), reste
-            return ufloat_fromstr(f"({valeur}+/-{incertitude}){exposant}"), reste
+                elargie = float(incertitude + _exposant(champs.get("eu")))
+            else:  # (1.20 ± 0.03)e3 : l'exposant vaut pour les deux
+                elargie = float(incertitude + exposant)
+            k = reglages().facteur_elargissement
+            return ufloat(float(valeur + exposant), elargie / k), reste
         if chiffres_significatifs:
             return ufloat_fromstr(valeur + exposant), reste
         return float(valeur + exposant), reste
@@ -119,7 +140,10 @@ class NombreArrondi:
     ``chiffres`` est la suite des chiffres significatifs (``"0"`` pour zéro),
     ``rang`` la puissance de dix du dernier, ``incertitude`` l'incertitude en
     unités de ce dernier chiffre (``None`` pour un nombre exact), ``special`` le
-    texte d'une valeur non finie (``"nan"``, ``"inf"``).
+    texte d'une valeur non finie (``"nan"``, ``"inf"``). ``facteur`` vaut
+    ``None`` si ``incertitude`` est l'incertitude-type (écriture courte), et le
+    facteur d'élargissement ``k`` si c'est l'incertitude élargie ``k·u``
+    (écriture « ± »).
     """
 
     negatif: bool
@@ -127,6 +151,7 @@ class NombreArrondi:
     rang: int
     incertitude: int | None = None
     special: str | None = None
+    facteur: float | None = None
 
     @property
     def exposant(self) -> int:
@@ -145,13 +170,21 @@ class NombreArrondi:
         *,
         notation: Notation = "auto",
         decimale: str = ".",
-        incertitude: StyleIncertitude | None = "courte",
+        incertitude: StyleIncertitude | Literal["auto"] | None = "auto",
     ) -> str:
-        """Écrit le nombre : ``1.20``, ``1.20(1)``, ``(1.20 ± 0.01)e3``…
+        """Écrit le nombre : ``1.20``, ``1.20(1)``, ``(1.20 ± 0.02)e3``…
 
-        ``incertitude`` vaut ``"courte"``, ``"pm"`` ou ``None`` (valeur seule).
-        L'exposant s'écrit ``e3``, que siunitx comprend.
+        ``incertitude`` vaut ``"courte"``, ``"pm"``, ``None`` (valeur seule) ou
+        ``"auto"`` : ``"pm"`` si le nombre a été arrondi sur l'incertitude
+        élargie (``facteur`` donné), ``"courte"`` sinon. L'écriture doit
+        convenir à l'arrondi : « ± » attend l'incertitude élargie, les
+        parenthèses l'incertitude-type (sinon ``ValueError``). L'exposant
+        s'écrit ``e3``, que siunitx comprend.
         """
+        if incertitude == "auto":
+            incertitude = "courte" if self.facteur is None else "pm"
+        if incertitude is not None and self.incertitude is not None:
+            self._verifier_style(incertitude)
         if self.special is not None:
             return ("-" if self.negatif else "") + self.special
         exposant = self._choisir_exposant(notation)
@@ -171,6 +204,20 @@ class NombreArrondi:
             if suffixe:
                 texte = f"({texte}){suffixe}"
         return texte.replace(".", decimale) if decimale != "." else texte
+
+    def _verifier_style(self, style: StyleIncertitude) -> None:
+        """Refuse d'écrire une incertitude sous une forme qui en changerait le sens."""
+        k = reglages().facteur_elargissement
+        if style == "courte" and self.facteur not in (None, 1):
+            raise ValueError(
+                "incertitude élargie : elle s'écrit derrière « ± », les parenthèses "
+                "portent l'incertitude-type (arrondir sans facteur)"
+            )
+        if style == "pm" and self.facteur is None and k != 1:
+            raise ValueError(
+                f"« ± » porte l'incertitude élargie : arrondir avec facteur={k:g} "
+                "(arrondir_valeur(..., elargie=True))"
+            )
 
     def _choisir_exposant(self, notation: Notation) -> int:
         """Puissance de dix mise en facteur (0 en notation fixe).
@@ -238,8 +285,13 @@ def arrondir(
     *,
     chiffres_incertitude: int = 1,
     chiffres: int | None = None,
+    facteur: float | None = None,
 ) -> NombreArrondi:
     """Arrondit ``valeur`` d'après son incertitude, ou à ``chiffres`` significatifs.
+
+    ``incertitude`` est l'incertitude-type ; avec ``facteur`` (``k``), l'arrondi
+    porte sur l'incertitude élargie ``k × incertitude``, à écrire derrière « ± » ;
+    sans, sur l'incertitude-type, à écrire entre parenthèses.
 
     Sans incertitude ni ``chiffres``, la valeur est exacte et s'écrit avec au
     plus 15 chiffres significatifs (299792458, 6.02214076e23) : les deux derniers
@@ -250,12 +302,13 @@ def arrondir(
         return NombreArrondi(valeur < 0, "0", 0, special=str(abs(valeur)))
     nombre = _en_decimal(valeur)
     if incertitude and math.isfinite(incertitude) and incertitude > 0:
-        ecart = _en_decimal(incertitude)
+        ecart = _en_decimal(incertitude * (1.0 if facteur is None else facteur))
         rang = _rang_chiffres(ecart, chiffres_incertitude)
         if nombre:  # au-delà de 17 chiffres, le flottant n'en porte plus
             rang = max(rang, nombre.adjusted() - _CHIFFRES_FLOTTANT + 1)
         unites = int(_quantifier(ecart, rang).scaleb(-rang))
-        return _construire(nombre, rang, unites)
+        arrondi = _construire(nombre, rang, unites)
+        return arrondi if facteur is None else replace(arrondi, facteur=float(facteur))
     if chiffres is not None:
         if chiffres < 1:
             raise ValueError("il faut au moins un chiffre significatif")
@@ -269,17 +322,23 @@ def arrondir(
     return _construire(exact, rang, None)
 
 
-def arrondir_valeur(valeur: Any, chiffres: int | None = None) -> NombreArrondi:
+def arrondir_valeur(
+    valeur: Any, chiffres: int | None = None, *, elargie: bool = False
+) -> NombreArrondi:
     """Arrondit un nombre (flottant ou ``ufloat``) comme l'écrivent ``texte`` et ``qty``.
 
-    Une valeur incertaine est arrondie d'après son incertitude ; une valeur
-    exacte, ou tout nombre si ``chiffres`` est donné, à ``chiffres`` chiffres
-    significatifs (par défaut le réglage ``chiffres``).
+    Une valeur incertaine est arrondie d'après son incertitude : l'incertitude-type
+    pour l'écriture courte, l'incertitude élargie (``elargie=True``, ``k·u`` avec
+    ``k`` le réglage ``facteur_elargissement``) pour l'écriture « ± ». Une valeur
+    exacte, ou tout nombre si ``chiffres`` est donné, est arrondie à ``chiffres``
+    chiffres significatifs (par défaut le réglage ``chiffres``).
 
     >>> arrondir_valeur(9.79828445167129).ecrire()
     '9.80'
     >>> arrondir_valeur(ufloat(9.79828, 0.02)).ecrire()
     '9.80(2)'
+    >>> arrondir_valeur(ufloat(9.79828, 0.02), elargie=True).ecrire()
+    '9.80 ± 0.04'
     """
     r = reglages()
     if isinstance(valeur, UFloat):
@@ -291,5 +350,9 @@ def arrondir_valeur(valeur: Any, chiffres: int | None = None) -> NombreArrondi:
     elif not incertitude:
         chiffres = r.chiffres
     return arrondir(
-        centre, incertitude, chiffres_incertitude=r.chiffres_incertitude, chiffres=chiffres
+        centre,
+        incertitude,
+        chiffres_incertitude=r.chiffres_incertitude,
+        chiffres=chiffres,
+        facteur=r.facteur_elargissement if elargie else None,
     )

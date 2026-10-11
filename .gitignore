@@ -8,3 +8,7 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+
+# Réglages locaux de VS Code
+*.code-workspace
+.vscode/

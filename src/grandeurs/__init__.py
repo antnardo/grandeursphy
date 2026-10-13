@@ -3,7 +3,7 @@
 L'API publique est réexportée ici ; les constantes sont dans
 :mod:`grandeurs.constantes` (en grandeurs) et :mod:`grandeurs.flottants` (en
 flottants SI), les fonctions usuelles qui propagent les incertitudes dans
-:mod:`grandeurs.fonctions`.
+:mod:`grandeurs.fonctions`, le coefficient de Student dans :mod:`grandeurs.student`.
 """
 
 __version__ = "0.2.0"
@@ -22,6 +22,7 @@ from grandeurs.reglages import (
     reglages_temporaires,
 )
 from grandeurs.saisie import grandeur, unit
+from grandeurs.student import coefficient_student
 from grandeurs.unites import Unite, equivalentes
 
 __all__ = [
@@ -34,6 +35,7 @@ __all__ = [
     "Unite",
     "__version__",
     "arrondir",
+    "coefficient_student",
     "configurer",
     "derouler",
     "dms",

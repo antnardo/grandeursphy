@@ -51,9 +51,11 @@ Le paquet s'installe depuis GitHub (ci-dessous).
 - **Les chiffres significatifs d'après l'écriture.** Une chaîne porte sa précision :
   « 1.20 » a trois chiffres significatifs, donc une incertitude-type de 0,01 ;
   uncertainties la propage, corrélations comprises, et l'affichage arrondit la
-  valeur au rang de l'incertitude : `(2.4 ± 0.2) m`. Derrière « ± » s'écrit
-  l'incertitude **élargie** 2u (facteur d'élargissement réglable), entre
-  parenthèses l'incertitude-type u : `2.4(1) m`. Une valeur exacte s'écrit à
+  valeur au rang de l'incertitude : `(2.4 ± 0.2) m`. Les écritures sont celles
+  du GUM : derrière « ± » et après « U(x) = », l'incertitude **élargie** 2u
+  (facteur d'élargissement réglable, ou le coefficient de Student) ; entre
+  parenthèses et après « u(x) = », l'incertitude-type u : `2.4(1) m`,
+  `d = 2.4 m ; u(d) = 0.1 m`. Une valeur exacte s'écrit à
   `chiffres` chiffres significatifs (3 par défaut, réglable) : fini les
   `9.79828445167129`.
 - **La simplification en SI** avec les unités dérivées, par une table de ce qu'un
@@ -86,7 +88,7 @@ pip install git+https://github.com/antnardo/grandeursphy
 **Avec la roue d'une release**, pour un poste qui a pip mais pas git : chaque
 [release](https://github.com/antnardo/grandeursphy/releases) porte
 `grandeursphy-<version>-py3-none-any.whl` (et le sdist `.tar.gz`), qui s'installe
-par `pip install grandeursphy-0.2.0-py3-none-any.whl`.
+par `pip install grandeursphy-0.3.0-py3-none-any.whl`.
 
 **Pour développer**, un clone et [uv](https://docs.astral.sh/uv/) :
 
@@ -120,6 +122,7 @@ Deux règles valent partout. **Une chaîne est une mesure, un nombre est exact**
 ```python
 import numpy as np
 from grandeurs import grandeur, qty, num, unit, configurer, reglages_temporaires
+from grandeurs import coefficient_student
 from grandeurs import constantes as cst
 from grandeurs.fonctions import sqrt, sin
 
@@ -130,6 +133,8 @@ g = grandeur(1.2, "m", incertitude=0.05)       # incertitude-type u
 g = grandeur(1.2, "m", incertitude="5 cm")
 g = grandeur("1.20 ± 0.02 m")         # « ± » : incertitude élargie, u = 0,01
 g = grandeur("1.20(1) m")             # parenthèses : u = 0,01
+g = grandeur("x = 1.20 m ; u(x) = 0.01 m")   # forme nommée, incertitude-type
+g = grandeur("x = 1.20 m ; U(x) = 0.02 m")   # forme nommée, élargie : u = 0,01
 g = grandeur([1.0, 2.0], "m", incertitude=[0.1, 0.02])
 g = grandeur("1.20 km", "m")          # lue puis convertie
 g.valeur, g.incertitude, g.unite, g.chiffres, g.valeur_si
@@ -145,6 +150,9 @@ print(grandeur(36, "km/h").vers("m.s-1"))        # 10.0 m·s⁻¹
 print(grandeur(9.79828445167129, "m/s2"))        # 9.80 m·s⁻²  (chiffres = 3)
 print(grandeur(2, "m").texte(chiffres=1))        # 2 m
 print(grandeur("1.20 m").texte(style="courte", decimale=","))   # 1,20(1) m
+print(grandeur("1.20 m").texte(style="u", nom="L"))   # L = 1.20 m ; u(L) = 0.01 m
+print(grandeur("1.20 m").texte(style="U", nom="L"))   # L = 1.20 m ; U(L) = 0.02 m
+print(grandeur("1.20 m").texte(k=coefficient_student(5)))   # (1.20 ± 0.03) m
 configurer(decimale=",", chiffres=4)             # pour tout le processus
 with reglages_temporaires(chiffres=5):           # le temps d'un bloc
     print(grandeur(9.79828445167129, "m/s2"))    # 9,7983 m·s⁻²
@@ -153,6 +161,8 @@ with reglages_temporaires(chiffres=5):           # le temps d'un bloc
 qty(cst.EPS_0)                        # '\qty{8.854187819(1)e-12}{F.m^{-1}}'
 qty(grandeur("1.20 m.s-1"), "km/h")   # '\qty{4.32(4)}{km.h^{-1}}'
 qty(grandeur(20, "°C"), chiffres=2)   # '\qty{20}{\degreeCelsius}'
+qty(grandeur("1.20 m"), style="pm")   # '\qty{1.20 \pm 0.02}{m}'
+qty(grandeur("1.20 m"), style="U")    # 'x = \qty{1.20}{m} ; U(x) = \qty{0.02}{m}'
 num(cst.ALPHA)                        # '\num{0.007297352564(1)}'
 qty(grandeur(np.array([1.0, 2.5]), "m"))   # '\qtylist{1.00;2.50}{m}'
 ```
@@ -176,14 +186,27 @@ qu'on veut exacte se passe en nombre, `grandeur(50, "Hz")`, ou avec le réglage
 `chiffres_significatifs=False`. L'affichage le montre : `(50 ± 2) Hz` contre
 `50.0 Hz`.
 
-**« ± » est l'incertitude élargie, les parenthèses l'incertitude-type.** Le paquet
-calcule avec u (`g.incertitude`, le `std_dev` d'uncertainties) ; ce qui s'écrit ou
-se lit derrière « ± » vaut k·u, k = 2 par défaut (réglage `facteur_elargissement`).
-`grandeur(1.2, "m", incertitude=0.01)` s'écrit `(1.20 ± 0.02) m` ou `1.20(1) m`,
-et `grandeur("1.20 ± 0.02 m")` se relit u = 0,01. Les deux écritures n'ont pas
-toujours le même rang : u = 0,06 m donne `1.23(6) m` mais `(1.2 ± 0.1) m`.
-L'argument `incertitude=` est u, et `qty` écrit toujours la forme courte, donc u :
-avec l'option `uncertainty-mode=separate` de siunitx, celle-ci s'affiche « ± u ».
+**Ce que le GUM écrit.** Le paquet calcule avec l'incertitude-type u
+(`g.incertitude`, le `std_dev` d'uncertainties, l'argument `incertitude=` de
+`grandeur`, les constantes CODATA) et écrit l'une ou l'autre des deux incertitudes
+du GUM (JCGM 100:2008, 7.2.2 et 7.2.4), k étant dit : u entre parenthèses et
+derrière « u(x) = », U = k·u derrière « ± » et « U(x) = », k = 2 par défaut
+(réglage `facteur_elargissement`) ou l'argument `k=` de `texte`, `qty` et `num`.
+Quatre styles (réglage `style_incertitude`, argument `style=`) pour
+`grandeur(1.2, "m", incertitude=0.01)` : `"pm"`, `(1.20 ± 0.02) m` ; `"courte"`,
+`1.20(1) m` ; `"u"`, `x = 1.20 m ; u(x) = 0.01 m` ; `"U"`,
+`x = 1.20 m ; U(x) = 0.02 m` (le nom par `nom=`). Pour une série de N mesures,
+`coefficient_student(N)` (loi de Student à N − 1 degrés de liberté, 95 % par
+défaut) remplace 2 : `g.texte(k=coefficient_student(5))`, soit k = 2,78, ou
+`configurer(facteur_elargissement=coefficient_student(N))`. La lecture suit la
+même règle : `grandeur("1.20(2) m")` et `grandeur("x = 1.20 m ; u(x) = 0.02 m")`
+donnent u = 0,02, `grandeur("1.20 ± 0.04 m")` et
+`grandeur("x = 1.20 m ; U(x) = 0.04 m")` aussi (U/k), de sorte que
+`grandeur(str(g))` et `lire_qty(qty(g))` redonnent `g.incertitude` dans les quatre
+styles. Les deux arrondis n'ont pas toujours le même rang : u = 0,06 m donne
+`1.23(6) m` mais `(1.2 ± 0.1) m`. `qty` écrit la forme courte par défaut, donc u :
+avec l'option `uncertainty-mode=separate` de siunitx, elle s'affiche « ± u » ;
+`qty(g, style="pm")` écrit `\qty{1.2 \pm 0.1}{m}`.
 
 **Une valeur exacte s'écrit à `chiffres` chiffres significatifs, trois par
 défaut** : `grandeur(2, "m")` s'affiche `2.00 m` et `qty(grandeur(20, "°C"))` donne
@@ -223,12 +246,13 @@ lit déjà comme micro-année et attolitre : on écrit `au` et `ly`.
 
 | Module | Rôle |
 | --- | --- |
-| `grandeurs` | `grandeur`, `unit`, `qty`, `num`, `lire_qty`, les angles, les réglages : tout ce qu'un corrigé importe |
+| `grandeurs` | `grandeur`, `unit`, `qty`, `num`, `lire_qty`, `coefficient_student`, les angles, les réglages : tout ce qu'un corrigé importe |
 | `grandeurs.constantes` | constantes fondamentales et unités en usage avec le SI, en grandeurs ; `codata`, `cles_codata`, `decrire`, `FICHES` |
 | `grandeurs.constantes.astro`, `.cgs`, `.us` | astronomie (UAI, Terre, Lune), unités CGS, unités anglo-saxonnes |
 | `grandeurs.flottants` (et `.astro`, `.cgs`, `.us`) | les mêmes noms en `float` SI, pour les calculs sans unités |
 | `grandeurs.fonctions` | `sqrt`, `exp`, `ln`, `log10`, trigonométrie, avec incertitudes et unités |
 | `grandeurs.chiffres` | `lire_nombre`, `arrondir`, `arrondir_valeur`, `NombreArrondi` : chiffres significatifs et arrondi décimal |
+| `grandeurs.student` | `coefficient_student(n, niveau)` : le facteur d'élargissement d'une série de n mesures |
 | `grandeurs.angles` | `dms`, `DMS`, `lire_angle`, `ecrire_angle`, `ramener`, `derouler` |
 | `grandeurs.reglages` | `Reglages`, `configurer`, `reglages_temporaires` |
 | `grandeurs.registre` | le registre pint unique, `ureg` |
@@ -302,8 +326,8 @@ Les réglages sont un objet figé (`Reglages`) qu'on change par
 | `chiffres_significatifs` | `True` | « 1.20 » porte une incertitude de 0,01 ; sinon il est exact |
 | `chiffres_incertitude` | `1` | chiffres significatifs gardés sur l'incertitude à l'affichage |
 | `afficher_incertitude` | `True` | sinon, valeur seule, arrondie à ses chiffres significatifs |
-| `style_incertitude` | `"pm"` | à l'écran : `(1.20 ± 0.02) m` (incertitude élargie) ou `"courte"` : `1.20(1) m` (incertitude-type) |
-| `facteur_elargissement` | `2` | k : « ± » écrit et lit k·u ; les parenthèses restent en u |
+| `style_incertitude` | `"pm"` | à l'écran : `(1.20 ± 0.02) m` (élargie) ; `"courte"` : `1.20(1) m` (type) ; `"u"` : `x = 1.20 m ; u(x) = 0.01 m` ; `"U"` : `x = 1.20 m ; U(x) = 0.02 m` |
+| `facteur_elargissement` | `2` | k : « ± » et « U(x) = » écrivent et lisent k·u ; les parenthèses et « u(x) = » restent en u ; `k=` à l'appel l'emporte |
 | `decimale` | `"."` | `","` pour la virgule française |
 | `notation` | `"auto"` | `"fixe"`, `"scientifique"`, `"ingenieur"` |
 | `sans_unite` | `"avertissement"` | grandeur créée sans unité : `"silence"`, `"avertissement"` ou `"erreur"` |
@@ -318,12 +342,13 @@ aussi celle de l'enseignement : l'incertitude-type vaut une unité du dernier ch
 écrit, et les zéros de droite comptent (« 1200 » a quatre chiffres significatifs,
 « 1.2e3 » deux). Sont lus « 1.20(3) » (u = 0,03), « 1.20 ± 0.03 » et
 « (1.20 ± 0.03)e3 » (incertitude élargie : u = 0,015, et 15 pour le second),
-« 1,20 », « 1.20×10^3 » et « 1.20×10⁻³ ». Un nombre Python est exact.
+« x = 1.20 m ; u(x) = 0.03 m » et « x = 1.20 m ; U(x) = 0.06 m » (u = 0,03 pour
+les deux), « 1,20 », « 1.20×10^3 » et « 1.20×10⁻³ ». Un nombre Python est exact.
 
 La propagation est celle d'uncertainties, au premier ordre, corrélations comprises :
-`a - a` vaut exactement 0. À l'affichage, l'incertitude écrite (k·u derrière « ± », u
-entre parenthèses) est arrondie à `chiffres_incertitude` chiffres et la valeur au
-même rang : c'est l'incertitude qui
+`a - a` vaut exactement 0. À l'affichage, l'incertitude écrite (k·u derrière « ± »
+et « U(x) = », u entre parenthèses et après « u(x) = ») est arrondie à
+`chiffres_incertitude` chiffres et la valeur au même rang : c'est l'incertitude qui
 fixe les chiffres significatifs. Une valeur exacte est arrondie au réglage
 `chiffres`. L'arrondi se fait en décimal, au plus proche, demi vers le haut (2,675
 donne 2,68, là où `round(2.675, 2)` donne 2,67). Un tableau s'écrit élément par
@@ -403,15 +428,20 @@ Un nombre nu passé à ces fonctions est en radians, comme dans pint.
 
 Aucun pont entre pythontex et siunitx n'existe ; `qty` et `num` écrivent la commande
 siunitx depuis Python : `\qty{1.20(1)}{m.s^{-1}}`,
-`\qty{8.854187819(1)e-12}{F.m^{-1}}`, `\num{0.007297352564(1)}`. L'incertitude est
-en notation courte (siunitx l'affiche selon `uncertainty-mode`), la valeur arrondie
-au rang de l'incertitude ou au réglage `chiffres`, l'exposant écrit `e3`. L'unité
-est littérale, comme dans les documents existants (`kg.m^{-3}`, `\micro m`,
-`k\ohm`, `\degreeCelsius`). Options : `incertitude=False`, `chiffres=3`,
-`decimale=","` (siunitx lit les deux ; `output-decimal-marker` décide de
-l'affichage), `notation`, une unité de conversion (`qty(v, "km/h")`) et
-`macro="SI"` pour siunitx 2. Un tableau donne `\qtylist`. `lire_qty` relit
-`\qty`, `\SI` et `\num`, unité littérale comprise.
+`\qty{8.854187819(1)e-12}{F.m^{-1}}`, `\num{0.007297352564(1)}`. L'incertitude
+suit le GUM : en notation courte par défaut, l'incertitude-type (siunitx l'affiche
+selon `uncertainty-mode`) ; derrière `\pm` avec `style="pm"`, l'incertitude
+élargie k·u (`\qty{1.20 \pm 0.02}{m}` ; un exposant se met en fin de nombre,
+`1.20 \pm 0.02 e3`, la seule forme que siunitx lit) ; nommée avec `style="u"`
+(`x = \qty{1.20}{m} ; u(x) = \qty{0.01}{m}`) ou `style="U"`
+(`x = \qty{1.20}{m} ; U(x) = \qty{0.02}{m}`). La valeur est arrondie au rang de
+l'incertitude ou au réglage `chiffres`, l'exposant écrit `e3`. L'unité est
+littérale, comme dans les documents existants (`kg.m^{-3}`, `\micro m`, `k\ohm`,
+`\degreeCelsius`). Options : `incertitude=False`, `chiffres=3`, `decimale=","`
+(siunitx lit les deux ; `output-decimal-marker` décide de l'affichage),
+`notation`, `nom`, `k`, une unité de conversion (`qty(v, "km/h")`) et `macro="SI"`
+pour siunitx 2. Un tableau donne `\qtylist`. `lire_qty` relit `\qty`, `\SI` et
+`\num` dans les quatre styles, unité littérale comprise.
 
 ## Tester
 

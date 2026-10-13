@@ -3,20 +3,37 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; versions :
 [SemVer](https://semver.org/lang/fr/).
 
-## Non publié
+## 0.3.0 - 2026-10-13
 
-Décision du 11 octobre 2026 : une écriture « x ± a » signifie désormais
-l'incertitude élargie a = k·u, avec k = 2 par défaut. Le paquet calcule toujours
-avec l'incertitude-type u (`std_dev`) ; seul ce qui s'écrit ou se lit derrière un
-« ± » change.
+Les écritures sont celles du GUM (JCGM 100:2008, 7.2.2 et 7.2.4) : « x ± a » et
+« U(x) = a » portent l'incertitude élargie a = k·u, k = 2 par défaut ; les
+parenthèses « 1,20(2) » et « u(x) = 0,02 » portent l'incertitude-type u. Le paquet
+calcule toujours avec u (`std_dev`, `g.incertitude`, l'argument `incertitude=`,
+les constantes CODATA).
 
 ### Ajouté
 
 - Réglage `facteur_elargissement` (2 par défaut, nombre fini > 0) : le facteur k
-  de l'incertitude élargie.
-- `arrondir(..., facteur=k)`, `arrondir_valeur(..., elargie=True)` et
-  `Grandeur.arrondi(elargie=True)` arrondissent sur l'incertitude élargie ;
-  `NombreArrondi` porte un champ `facteur` (`None` pour l'incertitude-type).
+  de l'incertitude élargie ; l'argument `k=` de `texte`, `arrondi`, `qty` et `num`
+  l'emporte à l'appel.
+- Styles d'écriture `"u"` et `"U"` (réglage `style_incertitude`, argument
+  `style=`) : `x = 1,20 m ; u(x) = 0,01 m` (incertitude-type, arrondie comme la
+  forme courte) et `x = 1,20 m ; U(x) = 0,02 m` (incertitude élargie, arrondie
+  comme « ± »), le nom par `nom=` ; un tableau donne
+  `x = [1,0; 2,00] m ; u(x) = [0,1; 0,02] m`. `grandeur` et `lire_qty` relisent
+  ces formes (`x = \qty{1.20}{m} ; U(x) = \qty{0.04}{m}` donne u = 0,02).
+- `qty(g, style=…)` et `num(x, style=…)` : `"pm"` écrit `\qty{1.20 \pm 0.02}{m}`,
+  l'exposant en fin de nombre (`1.20 \pm 0.02 e3`, la seule forme que siunitx 3
+  lit) ; `"u"` et `"U"` écrivent `x = \qty{1.20}{m} ; u(x) = \qty{0.01}{m}` ;
+  `"courte"`, le défaut, reste `\qty{1.20(1)}{m}`. `lire_qty` relit `\pm`.
+- `coefficient_student(n, niveau=0.95)` : quantile de la loi de Student à n − 1
+  degrés de liberté, pour `g.texte(k=coefficient_student(5))` ou
+  `configurer(facteur_elargissement=coefficient_student(N))`.
+- `arrondir(..., facteur=k)`, `arrondir_valeur(..., elargie=True, k=…)` et
+  `Grandeur.arrondi(elargie=True, k=…)` arrondissent sur l'incertitude élargie ;
+  `NombreArrondi` porte un champ `facteur` (`None` pour l'incertitude-type) et
+  une méthode `ecrire_incertitude` (l'incertitude seule, au rang et à l'exposant
+  de la valeur) ; `FormeNommee`, `separer_forme_nommee`, `verifier_facteur`.
 
 ### Modifié (incompatible)
 
@@ -33,12 +50,12 @@ avec l'incertitude-type u (`std_dev`) ; seul ce qui s'écrit ou se lit derrière
 
 ### Inchangé
 
-- La notation courte « 1.20(1) » et toute la sortie siunitx (`qty`, `num`, qui
-  n'écrivent que la forme courte) restent en u ; « 1.20(3) » et `\qty{1.20(3)}{m}`
-  se lisent toujours u = 0,03. Les chiffres significatifs (« 1.20 » → u = 0,01),
-  l'argument `incertitude=` de `grandeur` et les constantes (u de CODATA, créées
-  par `ufloat` et non lues dans un texte) ne changent pas ; seul leur affichage
-  « ± » montre 2u.
+- La notation courte « 1.20(1) » et la sortie siunitx par défaut (`qty`, `num`)
+  restent en u, à l'écriture comme à la lecture : « 1.20(3) » et
+  `\qty{1.20(3)}{m}` se lisent toujours u = 0,03. Les chiffres significatifs
+  (« 1.20 » → u = 0,01), l'argument `incertitude=` de `grandeur` et les
+  constantes (u de CODATA, créées par `ufloat` et non lues dans un texte) ne
+  changent pas ; seule leur écriture « ± » ou « U(x) = » montre 2u.
 
 ## 0.2.0 - 2026-10-10
 

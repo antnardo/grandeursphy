@@ -6,7 +6,7 @@ flottants SI), les fonctions usuelles qui propagent les incertitudes dans
 :mod:`grandeurs.fonctions`, le coefficient de Student dans :mod:`grandeurs.student`.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from grandeurs.angles import DMS, derouler, dms, ecrire_angle, lire_angle, ramener
 from grandeurs.chiffres import NombreArrondi, arrondir, lire_nombre

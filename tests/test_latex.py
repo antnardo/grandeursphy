@@ -137,6 +137,111 @@ def test_lire_qty_inverse_de_qty(g):
     assert relu.valeur == pytest.approx(g.valeur, rel=1e-9)
 
 
+@pytest.mark.parametrize(
+    ("appel", "attendu"),
+    [
+        (lambda: qty(grandeur("1.20 m"), style="pm"), r"\qty{1.20 \pm 0.02}{m}"),
+        (lambda: qty(grandeur("1.20e3 kg.m-3"), style="pm"), r"\qty{1.20 \pm 0.02 e3}{kg.m^{-3}}"),
+        (lambda: qty(grandeur("-0.5 K"), style="pm"), r"\qty{-0.5 \pm 0.2}{K}"),
+        (lambda: qty(grandeur("1.20 m"), style="pm", decimale=","), r"\qty{1,20 \pm 0,02}{m}"),
+        (
+            lambda: qty(grandeur([1.0, 2.0], "m", incertitude=[0.1, 0.02]), style="pm"),
+            r"\qtylist{1.0 \pm 0.2;2.00 \pm 0.04}{m}",
+        ),
+        (lambda: num(ufloat(1.234, 0.012), style="pm"), r"\num{1.23 \pm 0.02}"),
+        (lambda: qty(grandeur(2, "m"), style="pm"), r"\qty{2.00}{m}"),
+        (lambda: qty(grandeur("1.20 m"), style="pm", incertitude=False), r"\qty{1.20}{m}"),
+    ],
+)
+def test_qty_style_pm(appel, attendu):
+    assert appel() == attendu
+
+
+@pytest.mark.parametrize(
+    ("appel", "attendu"),
+    [
+        (lambda: qty(grandeur("1.20 m"), style="u"), r"x = \qty{1.20}{m} ; u(x) = \qty{0.01}{m}"),
+        (lambda: qty(grandeur("1.20 m"), style="U"), r"x = \qty{1.20}{m} ; U(x) = \qty{0.02}{m}"),
+        (
+            lambda: qty(grandeur("1.20 m"), style="U", nom="v", decimale=","),
+            r"v = \qty{1,20}{m} ; U(v) = \qty{0,02}{m}",
+        ),
+        (
+            lambda: qty(grandeur("1.20e3 kg.m-3"), style="u"),
+            r"x = \qty{1.20e3}{kg.m^{-3}} ; u(x) = \qty{0.01e3}{kg.m^{-3}}",
+        ),
+        (
+            lambda: qty(grandeur([1.0, 2.0], "m", incertitude=[0.1, 0.02]), style="U"),
+            r"x = \qtylist{1.0;2.00}{m} ; U(x) = \qtylist{0.2;0.04}{m}",
+        ),
+        (lambda: qty(grandeur(2, "m"), style="u"), r"x = \qty{2.00}{m}"),
+        (lambda: qty(grandeur("1.20 m"), style="U", incertitude=False), r"x = \qty{1.20}{m}"),
+        (lambda: num(ufloat(1.234, 0.012), style="u"), r"x = \num{1.23} ; u(x) = \num{0.01}"),
+        (lambda: num(ufloat(1.234, 0.012), style="U"), r"x = \num{1.23} ; U(x) = \num{0.02}"),
+        (lambda: num(0.5, style="u", nom="e"), r"e = \num{0.500}"),
+    ],
+)
+def test_qty_styles_nommes(appel, attendu):
+    assert appel() == attendu
+
+
+def test_k_a_l_appel():
+    g = grandeur("1.20 m")
+    assert qty(g, style="pm", k=3) == r"\qty{1.20 \pm 0.03}{m}"
+    assert qty(g, style="U", k=3) == r"x = \qty{1.20}{m} ; U(x) = \qty{0.03}{m}"
+    assert qty(g, k=3) == r"\qty{1.20(1)}{m}"
+    with reglages_temporaires(facteur_elargissement=3):
+        assert qty(g, style="pm", k=1) == r"\qty{1.20 \pm 0.01}{m}"
+    assert num(ufloat(1.234, 0.012), style="pm", k=1) == r"\num{1.23 \pm 0.01}"
+
+
+@pytest.mark.parametrize(
+    ("texte", "attendu"),
+    [
+        (r"\qty{1.20 \pm 0.04}{m}", "(1.20 ± 0.04) m"),
+        (r"\qty{1.20 \pm 0.04 e3}{m}", "(1.20 ± 0.04)e3 m"),
+        (r"\qty{1.20\pm0.04}{m}", "(1.20 ± 0.04) m"),
+        (r"\num{1,20 \pm 0,04}", "1.20 ± 0.04"),
+    ],
+)
+def test_lire_qty_pm(texte, attendu):
+    assert str(lire_qty(texte)) == attendu
+
+
+@pytest.mark.parametrize(
+    ("texte", "incertitude"),
+    [
+        (r"x = \qty{1.20}{m} ; u(x) = \qty{0.04}{m}", 0.04),
+        (r"x = \qty{1.20}{m} ; U(x) = \qty{0.04}{m}", 0.02),
+        (r"L = \qty{1.20}{m} ; u(L) = \qty{4}{cm}", 0.04),
+        (r"x = \qty{1.20e3}{kg.m^{-3}} ; U(x) = \qty{0.02e3}{kg.m^{-3}}", 10),
+        (r"x = \num{0.500} ; u(x) = \num{0.002}", 0.002),
+    ],
+)
+def test_lire_qty_styles_nommes(texte, incertitude):
+    g = lire_qty(texte)
+    assert g.incertitude == pytest.approx(incertitude)
+    assert g.valeur == pytest.approx(lire_qty(texte.split(" ; ")[0].split(" = ")[1]).valeur)
+
+
+@pytest.mark.parametrize("style", ["pm", "courte", "u", "U"])
+@pytest.mark.parametrize(
+    "g",
+    [
+        grandeur(1.2, "m", incertitude=0.05),
+        grandeur(1230, "kg.m-3", incertitude=10),
+        grandeur("-0.5 K"),
+        grandeur(2.0, "m", incertitude=0.02),
+        grandeur(0.5, "", incertitude=0.003),
+    ],
+)
+def test_aller_retour_qty_lire_qty_dans_les_quatre_styles(g, style):
+    relu = lire_qty(qty(g, style=style))
+    assert relu.unite == g.unite
+    assert relu.valeur == pytest.approx(g.valeur)
+    assert relu.incertitude == pytest.approx(g.incertitude)
+
+
 def test_qty_garde_l_incertitude_type_quel_que_soit_le_facteur():
     g = grandeur("1.20 m")
     assert qty(g) == r"\qty{1.20(1)}{m}"

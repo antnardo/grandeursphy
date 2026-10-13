@@ -18,6 +18,7 @@ fil d'exécution démarré après ``configurer(...)`` voit bien la configuration
 alors qu'une ``ContextVar`` lui rendrait les valeurs par défaut.
 """
 
+import math
 import warnings
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -35,11 +36,12 @@ __all__ = [
     "reglages",
     "reglages_temporaires",
     "signaler",
+    "verifier_facteur",
 ]
 
 Niveau: TypeAlias = Literal["silence", "avertissement", "erreur"]
 Notation: TypeAlias = Literal["auto", "fixe", "scientifique", "ingenieur"]
-StyleIncertitude: TypeAlias = Literal["pm", "courte"]
+StyleIncertitude: TypeAlias = Literal["pm", "courte", "u", "U"]
 
 
 class SansUniteWarning(UserWarning):
@@ -66,14 +68,19 @@ class Reglages:
       l'incertitude à l'affichage (la valeur est arrondie au même rang) ;
     - ``afficher_incertitude`` : afficher l'incertitude, ou seulement la valeur
       arrondie à ses chiffres significatifs ;
-    - ``style_incertitude`` : à l'écran, ``"pm"`` donne ``(1.20 ± 0.02) m``,
-      l'incertitude élargie, et ``"courte"`` donne ``1.20(1) m``, l'incertitude-type
-      (la sortie LaTeX est toujours courte) ;
+    - ``style_incertitude`` : à l'écran (``str``, :meth:`Grandeur.texte`), les
+      quatre écritures du GUM : ``"pm"`` donne ``(1.20 ± 0.02) m``, l'incertitude
+      élargie ; ``"courte"`` donne ``1.20(1) m``, l'incertitude-type ; ``"u"``
+      la nomme, ``x = 1.20 m ; u(x) = 0.01 m`` ; ``"U"`` nomme l'élargie,
+      ``x = 1.20 m ; U(x) = 0.02 m`` (le nom par l'argument ``nom``). La sortie
+      LaTeX est courte par défaut (``qty(g, style=…)``) ;
     - ``facteur_elargissement`` : facteur ``k`` de l'incertitude élargie, 2 par
       défaut. Le paquet calcule avec l'incertitude-type ``u`` ; tout ce qui
-      s'écrit ou se lit derrière un « ± » est l'incertitude élargie ``k·u`` :
-      ``(1.20 ± 0.02) m`` s'écrit pour ``u = 0,01 m``, et « 1.20 ± 0.02 » se lit
-      ``u = 0,01``. La notation parenthésée « 1.20(1) » reste en ``u`` ;
+      s'écrit ou se lit derrière un « ± » ou après « U(x) = » est l'incertitude
+      élargie ``k·u`` : ``(1.20 ± 0.02) m`` s'écrit pour ``u = 0,01 m``, et
+      « 1.20 ± 0.02 » se lit ``u = 0,01``. La notation parenthésée « 1.20(1) »
+      et « u(x) = » restent en ``u``. L'argument ``k`` de ``texte``, ``qty`` et
+      ``num`` l'emporte à l'appel ;
     - ``decimale`` : séparateur décimal, ``"."`` ou ``","`` ;
     - ``notation`` : ``"auto"``, ``"fixe"``, ``"scientifique"`` ou ``"ingenieur"``.
     """
@@ -97,15 +104,20 @@ class Reglages:
             valeur = getattr(self, nom)
             if not isinstance(valeur, int) or valeur < 1:
                 raise ValueError(f"{nom} doit être un entier ≥ 1")
-        k = self.facteur_elargissement
-        if isinstance(k, bool) or not isinstance(k, int | float) or not k > 0 or k == float("inf"):
-            raise ValueError("facteur_elargissement doit être un nombre fini > 0")
+        verifier_facteur(self.facteur_elargissement)
 
     @staticmethod
     def _verifier(nom: str, valeur: object, permis: tuple[object, ...]) -> None:
         if valeur not in permis:
             choix = ", ".join(repr(p) for p in permis)
             raise ValueError(f"réglage {nom} = {valeur!r} invalide ; choix : {choix}")
+
+
+def verifier_facteur(k: object) -> float:
+    """Vérifie qu'un facteur d'élargissement est un nombre fini > 0 ; le rend en flottant."""
+    if isinstance(k, bool) or not isinstance(k, int | float) or not math.isfinite(k) or k <= 0:
+        raise ValueError(f"facteur d'élargissement {k!r} invalide : il faut un nombre fini > 0")
+    return float(k)
 
 
 _actuels = Reglages()

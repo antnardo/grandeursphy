@@ -161,9 +161,62 @@ class TestEcriture:
         assert g.texte(style="courte") == "1.20(1) m"
 
     @pytest.mark.parametrize(
+        ("options", "attendu"),
+        [
+            ({"style": "u"}, "x = 1.20 m ; u(x) = 0.01 m"),
+            ({"style": "U"}, "x = 1.20 m ; U(x) = 0.02 m"),
+            ({"style": "u", "nom": "L"}, "L = 1.20 m ; u(L) = 0.01 m"),
+            ({"style": "U", "decimale": ","}, "x = 1,20 m ; U(x) = 0,02 m"),
+            ({"style": "U", "k": 3}, "x = 1.20 m ; U(x) = 0.03 m"),
+            ({"style": "u", "k": 3}, "x = 1.20 m ; u(x) = 0.01 m"),
+            ({"style": "pm", "k": 3}, "(1.20 ± 0.03) m"),
+            ({"style": "courte", "k": 3}, "1.20(1) m"),
+            ({"style": "u", "incertitude": False}, "x = 1.20 m"),
+            ({"style": "U", "chiffres": 2}, "x = 1.2 m"),
+            ({"style": "U", "notation": "scientifique"}, "x = 1.20 m ; U(x) = 0.02 m"),
+        ],
+    )
+    def test_styles_nommes_et_k_a_l_appel(self, options, attendu):
+        assert grandeur("1.20 m").texte(**options) == attendu
+
+    @pytest.mark.parametrize(
+        ("g", "style", "attendu"),
+        [
+            (grandeur("1.20e3 kg.m-3"), "U", "x = 1.20e3 kg·m⁻³ ; U(x) = 0.02e3 kg·m⁻³"),
+            (grandeur("1.20e3 kg.m-3"), "u", "x = 1.20e3 kg·m⁻³ ; u(x) = 0.01e3 kg·m⁻³"),
+            (grandeur(2, "m"), "u", "x = 2.00 m"),
+            (grandeur("30.0 °"), "U", "x = 30.0° ; U(x) = 0.2°"),
+            (grandeur("0.500", ""), "u", "x = 0.500 ; u(x) = 0.001"),
+            (grandeur(1.234, "m", incertitude=0.06), "u", "x = 1.23 m ; u(x) = 0.06 m"),
+            (grandeur(1.234, "m", incertitude=0.06), "U", "x = 1.2 m ; U(x) = 0.1 m"),
+            (
+                grandeur([1.0, 2.0], "m", incertitude=[0.1, 0.02]),
+                "u",
+                "x = [1.0; 2.00] m ; u(x) = [0.1; 0.02] m",
+            ),
+            (
+                grandeur([1.0, 2.0], "m", incertitude=[0.1, 0.02]),
+                "U",
+                "x = [1.0; 2.00] m ; U(x) = [0.2; 0.04] m",
+            ),
+            (grandeur(np.array([1.0, 2.0]), "m"), "U", "x = [1.00; 2.00] m"),
+        ],
+    )
+    def test_styles_nommes_selon_la_grandeur(self, g, style, attendu):
+        assert g.texte(style=style) == attendu
+
+    @pytest.mark.parametrize(
+        ("style", "attendu"),
+        [("u", "x = 1.20 m ; u(x) = 0.01 m"), ("U", "x = 1.20 m ; U(x) = 0.02 m")],
+    )
+    def test_str_suit_le_style_nomme_du_reglage(self, style, attendu):
+        with reglages_temporaires(style_incertitude=style):
+            assert str(grandeur("1.20 m")) == attendu
+
+    @pytest.mark.parametrize(
         "texte", ["1.20 m", "(1.20 ± 0.02) m", "1.20(1) m", "(5.0 ± 0.4)e3 Pa", "-0.5 K"]
     )
-    @pytest.mark.parametrize("style", ["pm", "courte"])
+    @pytest.mark.parametrize("style", ["pm", "courte", "u", "U"])
     def test_aller_retour_str_grandeur(self, texte, style):
         g = grandeur(texte)
         relu = grandeur(g.texte(style=style))
@@ -183,6 +236,8 @@ class TestEcriture:
         g = grandeur(1.234, "m", incertitude=0.06)
         assert g.arrondi().ecrire() == "1.23(6)"
         assert g.arrondi(elargie=True).ecrire() == "1.2 ± 0.1"
+        assert g.arrondi(elargie=True, k=1).ecrire() == "1.23 ± 0.06"
+        assert g.arrondi(elargie=True, k=3).ecrire() == "1.2 ± 0.2"
 
     def test_valeur_incertaine_ignore_le_reglage_chiffres(self):
         with reglages_temporaires(chiffres=5):

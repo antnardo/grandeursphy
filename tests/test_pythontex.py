@@ -23,6 +23,10 @@ from grandeurs.flottants import R_GP
 v = grandeur("1.20 m.s-1")
 \end{pycode}
 $v = \py{qty(v)}$, $R = \py{num(R_GP)}$, $g = \py{qty(grandeur(9.79828, "m/s2"))}$
+
+$v = \py{qty(v, style="pm")}$, $\rho = \py{qty(grandeur("1.20e3 kg.m-3"), style="pm")}$
+
+$\py{qty(v, style="u", nom="v")}$ ; $\py{qty(v, style="U", nom="v")}$
 \end{document}
 """
 
@@ -49,5 +53,9 @@ def test_document_pythontex_minimal(tmp_path: Path) -> None:
     assert (tmp_path / "doc.pdf").exists()
     macros = (tmp_path / "pythontex-files-doc" / "doc.pytxmcr").read_text(encoding="utf-8")
     assert r"\qty{1.20(1)}{m.s^{-1}}" in macros
+    assert r"\qty{1.20 \pm 0.02}{m.s^{-1}}" in macros
+    assert r"\qty{1.20 \pm 0.02 e3}{kg.m^{-3}}" in macros
+    assert r"v = \qty{1.20}{m.s^{-1}} ; u(v) = \qty{0.01}{m.s^{-1}}" in macros
+    assert r"v = \qty{1.20}{m.s^{-1}} ; U(v) = \qty{0.02}{m.s^{-1}}" in macros
     assert r"\num{8.31}" in macros
     assert r"\qty{9.80}{m.s^{-2}}" in macros

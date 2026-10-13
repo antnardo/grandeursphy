@@ -87,3 +87,8 @@ def test_signaler_erreur_leve_sans_unite_error():
 
 def test_facteur_d_elargissement_par_defaut():
     assert Reglages().facteur_elargissement == 2
+
+
+@pytest.mark.parametrize("style", ["pm", "courte", "u", "U"])
+def test_quatre_styles_d_incertitude(style):
+    assert Reglages(style_incertitude=style).style_incertitude == style

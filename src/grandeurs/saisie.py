@@ -14,7 +14,7 @@ import numpy as np
 import pint
 from uncertainties import UFloat, ufloat, unumpy
 
-from grandeurs.chiffres import lire_nombre
+from grandeurs.chiffres import FormeNommee, lire_nombre, separer_forme_nommee
 from grandeurs.grandeur import Grandeur
 from grandeurs.registre import ureg
 from grandeurs.reglages import reglages, signaler
@@ -55,6 +55,23 @@ def _avec_incertitude(valeur: Any, incertitude: Any) -> Any:
     return ufloat(float(valeur), float(incertitude))
 
 
+def _lire_forme_nommee(forme: FormeNommee) -> tuple[UFloat, str | None]:
+    """Lit « x = 1.20 m ; u(x) = 0.02 m » ou « … ; U(x) = 0.04 m » : valeur exacte, u ou U/k.
+
+    L'incertitude est convertie dans l'unité de la valeur si la sienne diffère
+    (« u(L) = 2 cm » pour « L = 1.20 m »).
+    """
+    centre, unite = lire_nombre(forme.valeur, chiffres_significatifs=False)
+    ecart, unite_ecart = lire_nombre(forme.incertitude, chiffres_significatifs=False)
+    if isinstance(centre, UFloat) or isinstance(ecart, UFloat):
+        raise ValueError(f"la valeur porte déjà une incertitude : {forme.valeur!r}")
+    if unite_ecart != unite:
+        ecart = ureg.Quantity(ecart, _unite_pint(unite_ecart)).to(_unite_pint(unite)).magnitude
+    if forme.elargie:
+        ecart /= reglages().facteur_elargissement
+    return ufloat(centre, ecart), unite or None
+
+
 def grandeur(valeur: Any, unite: Any = None, incertitude: Any = None) -> Grandeur:
     """Crée une grandeur.
 
@@ -63,7 +80,9 @@ def grandeur(valeur: Any, unite: Any = None, incertitude: Any = None) -> Grandeu
       :mod:`grandeurs.chiffres` pour les écritures lues : « 1.20(3) »,
       « 1.20 ± 0.03 », « 1,20 », « 1.20×10^3 »…) ; derrière « ± » se lit
       l'incertitude élargie (u = 0,015 pour « ± 0.03 » avec k = 2), entre
-      parenthèses l'incertitude-type ;
+      parenthèses l'incertitude-type ; les formes nommées
+      « x = 1.20 m ; u(x) = 0.03 m » (u = 0,03) et « x = 1.20 m ; U(x) = 0.06 m »
+      (u = 0,03 aussi) sont lues de même ;
     - ``grandeur(1.2, "m/s")``, ``grandeur(np.array([1, 2]), "m")`` : nombre ou
       tableau, exact sauf ``incertitude`` ;
     - ``grandeur(1.2, "m", incertitude=0.05)`` ou ``incertitude="5 cm"`` :
@@ -76,10 +95,14 @@ def grandeur(valeur: Any, unite: Any = None, incertitude: Any = None) -> Grandeu
     """
     unite_lue: Any = None
     if isinstance(valeur, str):
-        valeur, texte_unite = lire_nombre(
-            valeur, chiffres_significatifs=reglages().chiffres_significatifs
-        )
-        unite_lue = texte_unite or None
+        forme = separer_forme_nommee(valeur)
+        if forme is not None:
+            valeur, unite_lue = _lire_forme_nommee(forme)
+        else:
+            valeur, texte_unite = lire_nombre(
+                valeur, chiffres_significatifs=reglages().chiffres_significatifs
+            )
+            unite_lue = texte_unite or None
     elif isinstance(valeur, pint.Quantity):
         if valeur._REGISTRY is not ureg:  # quantité d'un autre registre : par le nom long
             valeur = ureg.Quantity(valeur.magnitude, f"{valeur.units:D}")

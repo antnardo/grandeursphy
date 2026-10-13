@@ -14,9 +14,9 @@ Ce qui est ajouté :
   propage les incertitudes au premier ordre, corrélations comprises
   (``a - a`` vaut exactement 0) ;
 - l'écriture : valeur arrondie d'après l'incertitude, unités à la française
-  (:meth:`texte`, ``str``), sortie siunitx (:meth:`latex`) ; derrière « ± »
-  s'écrit l'incertitude élargie (2u par défaut), entre parenthèses
-  l'incertitude-type u ;
+  (:meth:`texte`, ``str``), sortie siunitx (:meth:`latex`) ; comme dans le
+  GUM, derrière « ± » et après « U(x) = » s'écrit l'incertitude élargie (2u par
+  défaut), entre parenthèses et après « u(x) = » l'incertitude-type u ;
 - la simplification en SI avec unités dérivées (:meth:`si`) et la conversion
   dans une unité écrite comme dans un manuel (:meth:`vers`) ;
 - les opérations qu'``uncertainties`` déprécie sur ses nombres : les
@@ -29,7 +29,7 @@ pas le nombre 1, deux dimensions incompatibles ne s'additionnent pas.
 """
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pint
@@ -140,16 +140,20 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
 
     # Écriture
 
-    def arrondi(self, chiffres: int | None = None, *, elargie: bool = False) -> NombreArrondi:
+    def arrondi(
+        self, chiffres: int | None = None, *, elargie: bool = False, k: float | None = None
+    ) -> NombreArrondi:
         """Valeur arrondie d'après l'incertitude, ou à ``chiffres`` significatifs.
 
-        L'arrondi porte sur l'incertitude-type (écriture courte, ``1.20(1)``), ou
-        sur l'incertitude élargie si ``elargie`` (écriture « ± », ``1.20 ± 0.02``).
-        Une valeur exacte est arrondie au réglage ``chiffres`` (3 par défaut).
+        L'arrondi porte sur l'incertitude-type (écriture courte ``1.20(1)`` et
+        style « u »), ou sur l'incertitude élargie ``k·u`` si ``elargie``
+        (écriture « ± » ``1.20 ± 0.02`` et style « U »), ``k`` valant le réglage
+        ``facteur_elargissement`` sauf s'il est donné. Une valeur exacte est
+        arrondie au réglage ``chiffres`` (3 par défaut).
         """
         if np.ndim(self.magnitude):
             raise TypeError("l'arrondi ne s'applique qu'à une grandeur scalaire")
-        return arrondir_valeur(self.magnitude, chiffres, elargie=elargie)
+        return arrondir_valeur(self.magnitude, chiffres, elargie=elargie, k=k)
 
     def texte(
         self,
@@ -159,36 +163,64 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
         decimale: str | None = None,
         notation: Notation | None = None,
         style: StyleIncertitude | None = None,
+        nom: str = "x",
+        k: float | None = None,
     ) -> str:
         """Écrit la grandeur : ``(1.20 ± 0.02) m·s⁻¹``, ``1.20 m·s⁻¹``, ``[1.00; 2.00] m``…
 
-        Le style ``"pm"`` écrit l'incertitude élargie ``k·u`` (``k`` : réglage
-        ``facteur_elargissement``, 2 par défaut), le style ``"courte"``
-        l'incertitude-type ``u`` : ``1.20(1) m``.
+        Quatre styles, ceux du GUM : ``"pm"`` écrit l'incertitude élargie ``k·u``
+        derrière « ± » (``k`` : réglage ``facteur_elargissement``, 2 par défaut,
+        ou l'argument ``k``) ; ``"courte"`` l'incertitude-type ``u`` entre
+        parenthèses, ``1.20(1) m`` ; ``"u"`` la nomme,
+        ``x = 1.20 m ; u(x) = 0.01 m`` (le nom par ``nom``) ; ``"U"`` nomme
+        l'élargie, ``x = 1.20 m ; U(x) = 0.02 m``. Une valeur exacte s'écrit
+        ``x = 2.00 m`` dans les styles nommés.
         Les options valent par défaut les réglages (:func:`grandeurs.reglages`).
         ``chiffres`` impose un nombre de chiffres significatifs et masque alors
         l'incertitude. Un tableau est écrit élément par élément, avec la même
-        règle d'arrondi, entre crochets et séparés par des points-virgules.
+        règle d'arrondi, entre crochets et séparés par des points-virgules :
+        ``x = [1.0; 2.00] m ; u(x) = [0.1; 0.02] m``.
         """
         r = reglages()
         unite = self.unite.ecrire("texte")
         # Le SI colle °, ′ et ″ au nombre (30°), mais pas °C (20 °C).
         separateur = "" if unite in _ANGLES_COLLES else " "
+        style = style or r.style_incertitude
         montrer = (r.afficher_incertitude if incertitude is None else incertitude) and not chiffres
-        forme = (style or r.style_incertitude) if montrer else None
+        elargie = montrer and style in ("pm", "U")
+        notation = notation or r.notation
+        decimale = decimale or r.decimale
 
-        def ecrire(m: Any) -> str:
-            return arrondir_valeur(m, chiffres, elargie=forme == "pm").ecrire(
-                notation=notation or r.notation, decimale=decimale or r.decimale, incertitude=forme
-            )
+        def ecrire(m: Any, forme: Literal["pm", "courte"] | None) -> str:
+            arrondi = arrondir_valeur(m, chiffres, elargie=elargie, k=k)
+            return arrondi.ecrire(notation=notation, decimale=decimale, incertitude=forme)
 
-        if np.ndim(self.magnitude):
-            tableau = np.array2string(self.magnitude, separator="; ", formatter={"all": ecrire})
-            return f"{tableau}{separateur}{unite}".rstrip()
-        valeur = ecrire(self.magnitude)
-        if forme == "pm" and self.incertitude and not valeur.startswith("(") and unite:
-            valeur = f"({valeur})"
-        return f"{valeur}{separateur}{unite}" if unite else valeur
+        def ecrire_ecart(m: Any) -> str:
+            arrondi = arrondir_valeur(m, chiffres, elargie=elargie, k=k)
+            return arrondi.ecrire_incertitude(elargie=elargie, notation=notation, decimale=decimale)
+
+        def assembler(ecrire_nombre: Callable[[Any], str], *, parentheses: bool = False) -> str:
+            m = self.magnitude
+            if np.ndim(m):
+                nombre = np.array2string(m, separator="; ", formatter={"all": ecrire_nombre})
+            else:
+                nombre = ecrire_nombre(m)
+                if parentheses and not nombre.startswith("("):
+                    nombre = f"({nombre})"
+            return f"{nombre}{separateur}{unite}".rstrip()
+
+        if style in ("u", "U"):
+            texte = f"{nom} = {assembler(lambda m: ecrire(m, None))}"
+            if montrer and np.any(self.incertitude):
+                texte += f" ; {style}({nom}) = {assembler(ecrire_ecart)}"
+            return texte
+        forme: Literal["pm", "courte"] | None = None
+        if montrer:
+            forme = "pm" if style == "pm" else "courte"
+        return assembler(
+            lambda m: ecrire(m, forme),
+            parentheses=forme == "pm" and bool(unite) and bool(np.any(self.incertitude)),
+        )
 
     def latex(self, unite: Any = None, **options: Any) -> str:
         r"""Écrit ``\qty{1.20(1)}{m.s^{-1}}`` pour siunitx ; voir :func:`grandeurs.qty`."""

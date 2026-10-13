@@ -104,6 +104,33 @@ def test_sans_unite_refusee_au_niveau_erreur():
         grandeur("3.0")
 
 
+class TestFormeNommee:
+    def test_u_est_l_incertitude_type(self):
+        g = grandeur("x = 1.20 m ; u(x) = 0.04 m")
+        assert (g.valeur, g.incertitude, g.unite) == (1.2, pytest.approx(0.04), unit("m"))
+
+    def test_grand_u_est_l_incertitude_elargie(self):
+        assert grandeur("x = 1.20 m ; U(x) = 0.04 m").incertitude == pytest.approx(0.02)
+        with reglages_temporaires(facteur_elargissement=4):
+            assert grandeur("x = 1.20 m ; U(x) = 0.04 m").incertitude == pytest.approx(0.01)
+
+    def test_convertit_l_incertitude_dans_l_unite_de_la_valeur(self):
+        assert grandeur("L = 1.20 m ; u(L) = 4 cm").incertitude == pytest.approx(0.04)
+
+    def test_convertie_dans_l_unite_demandee(self):
+        g = grandeur("x = 1.20 m ; U(x) = 0.04 m", "cm")
+        assert (g.valeur, g.incertitude) == pytest.approx((120, 2))
+
+    def test_sans_unite_avertit(self):
+        with pytest.warns(SansUniteWarning):
+            g = grandeur("x = 0.500 ; u(x) = 0.002")
+        assert g.incertitude == pytest.approx(0.002)
+
+    def test_valeur_deja_incertaine_refusee(self):
+        with pytest.raises(ValueError, match="déjà"):
+            grandeur("x = 1.20 ± 0.02 m ; u(x) = 0.04 m")
+
+
 def test_chaines_exactes_si_reglage():
     with reglages_temporaires(chiffres_significatifs=False):
         assert grandeur("1.20 m").incertitude == 0.0

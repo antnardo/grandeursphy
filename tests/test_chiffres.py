@@ -3,7 +3,7 @@ import pytest
 from uncertainties import UFloat, ufloat
 
 from grandeurs import NombreArrondi, arrondir, lire_nombre, reglages_temporaires
-from grandeurs.chiffres import arrondir_valeur
+from grandeurs.chiffres import FormeNommee, arrondir_valeur, separer_forme_nommee
 
 
 @pytest.mark.parametrize(
@@ -207,3 +207,60 @@ def test_facteur_d_elargissement_reglable(k):
         # les parenthèses ne dépendent pas du facteur
         assert arrondir_valeur(ufloat(1.2, 0.01)).ecrire() == "1.20(1)"
         assert lire_nombre("1.20(1)")[0].std_dev == pytest.approx(0.01)
+
+
+# Styles nommés (« u(x) = », « U(x) = ») et k à l'appel.
+
+
+@pytest.mark.parametrize(
+    ("arrondi", "options", "attendu"),
+    [
+        (arrondir(1.2, 0.01), {}, "0.01"),
+        (arrondir(1.2, 0.01, facteur=2), {"elargie": True}, "0.02"),
+        (arrondir(1234.5, 12, facteur=2), {"elargie": True}, "0.02e3"),
+        (arrondir(1234.5, 12, facteur=2), {"elargie": True, "notation": "fixe"}, "20"),
+        (arrondir(1234.5, 12, facteur=2), {"elargie": True, "decimale": ","}, "0,02e3"),
+        (arrondir(0.000123, 0.000004), {"notation": "ingenieur"}, "4e-6"),
+        (arrondir(2.0, chiffres=3), {}, "0"),
+    ],
+)
+def test_ecrire_incertitude_seule_au_rang_et_a_l_exposant_de_la_valeur(arrondi, options, attendu):
+    assert arrondi.ecrire_incertitude(**options) == attendu
+
+
+@pytest.mark.parametrize(
+    ("arrondi", "elargie"),
+    [(arrondir(1.2, 0.01), True), (arrondir(1.2, 0.01, facteur=2), False)],
+)
+def test_ecrire_incertitude_refuse_le_mauvais_sens(arrondi, elargie):
+    with pytest.raises(ValueError, match="incertitude"):
+        arrondi.ecrire_incertitude(elargie=elargie)
+
+
+@pytest.mark.parametrize(
+    ("texte", "attendu"),
+    [
+        ("x = 1.20 m ; u(x) = 0.04 m", FormeNommee("1.20 m", "0.04 m", False)),
+        ("L=1,20 m;U(L)=4 cm", FormeNommee("1,20 m", "4 cm", True)),
+        ("x = 0.500 ; u(x) = 0.002", FormeNommee("0.500", "0.002", False)),
+        ("x = 1.20 m ; u(y) = 0.04 m", None),
+        ("1.20 m", None),
+        ("(1.20 ± 0.04) m", None),
+    ],
+)
+def test_separer_forme_nommee(texte, attendu):
+    assert separer_forme_nommee(texte) == attendu
+
+
+def test_k_a_l_appel_l_emporte_sur_le_reglage():
+    assert arrondir_valeur(ufloat(1.2, 0.01), elargie=True, k=3).ecrire() == "1.20 ± 0.03"
+    with reglages_temporaires(facteur_elargissement=3):
+        assert arrondir_valeur(ufloat(1.2, 0.01), elargie=True, k=1).ecrire() == "1.20 ± 0.01"
+    # sans élargissement, k ne change rien : l'incertitude-type s'écrit telle quelle
+    assert arrondir_valeur(ufloat(1.2, 0.01), k=3).ecrire() == "1.20(1)"
+
+
+@pytest.mark.parametrize("k", [0, -1, float("inf"), float("nan"), "2", True])
+def test_k_invalide_refuse(k):
+    with pytest.raises(ValueError, match="facteur"):
+        arrondir_valeur(ufloat(1.2, 0.01), elargie=True, k=k)

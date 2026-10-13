@@ -29,7 +29,7 @@ pas le nombre 1, deux dimensions incompatibles ne s'additionnent pas.
 """
 
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import pint
@@ -129,6 +129,14 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
         if isinstance(other, Unite):
             other = other.pint_unit
         return super().to(other, *contexts, **ctx_kwargs)  # type: ignore[no-any-return]
+
+    def to_base_units(self, *args: Any, **kwargs: Any) -> "Grandeur":
+        """Conversion de pint en unités de base, typée grandeur comme :meth:`to`.
+
+        Les arguments sont relayés tels quels : pint 0.26 accepte ``system``,
+        pint 0.25 (Python 3.11) n'accepte rien.
+        """
+        return cast("Grandeur", super().to_base_units(*args, **kwargs))
 
     def vers(self, unite: Any) -> "Grandeur":
         """Convertit dans ``unite`` : ``v.vers("km.h-1")``, ``T.vers("°C")``."""
@@ -252,6 +260,9 @@ class Grandeur(pint.UnitRegistry.Quantity):  # type: ignore[misc]
         ``uncertainties`` lui-même.
         """
         return super(Grandeur, _centrale(self)).compare(_centrale(other), op)
+
+    def __neg__(self) -> "Grandeur":
+        return cast("Grandeur", super().__neg__())
 
     def __abs__(self) -> Any:
         """Valeur absolue ; ``uncertainties`` déprécie ``abs`` sur un ``ufloat``.
